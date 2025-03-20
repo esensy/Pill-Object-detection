@@ -129,5 +129,5 @@ if __name__ == '__main__':
     
     TEST_DIR = "data/test_images"
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    results = test(img_dir=TEST_DIR, device=device, threshold=0.05)
+    results = test(img_dir=TEST_DIR, device=device, threshold=0.5)
     print(results)
