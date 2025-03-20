@@ -72,9 +72,9 @@ def get_transforms(mode='train'):
     Returns:
         torchvision.transforms.v2.Compose: 변환 함수
     """
-    ################################################################
+    ################################################################################################################################
     # 리사이즈 크기 설정해야함
-    #########################################
+    ################################################################################################################################
     if mode == 'train':
         return T.Compose([
             T.ToImage(), # PIL → TVImage 자동 변환
@@ -321,12 +321,10 @@ class PillDataset(Dataset):
 
         # 시험 분기 
         else:
+            # 이미지는 트랜스폼에서 자동적으로 증강됨
             if self.transform:
                 img = self.transform(img)
 
-########################################################################################################
-# test.py때에 수정이 필요해 보임
-            # 이미지, _ for in batch
             return img, img_file
 
 
@@ -392,7 +390,7 @@ class PillDataset(Dataset):
 
 ####################################################################################################
 # 4. 데이터 로더 함수
-def get_loader(img_dir, ann_dir, batch_size=16, mode="train", val_ratio=0.2, debug=False, seed=42):
+def get_loader(img_dir, ann_dir=None, batch_size=16, mode="train", val_ratio=0.2, debug=False, seed=42):
     """
     데이터 로더를 반환하는 함수
 

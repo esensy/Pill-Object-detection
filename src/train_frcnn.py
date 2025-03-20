@@ -2,13 +2,13 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from tqdm import tqdm
-from new_neo_project1.src.models.model import get_fast_rcnn_model
-from new_neo_project1.src.models.model import save_model
+from new_neo_project1.src.model_utils.basic_frcnn import get_fast_rcnn_model
+from new_neo_project1.src.model_utils.basic_frcnn import save_model
 from src.utils import get_optimizer
 from src.utils import get_scheduler
 # from src.dataset import get_dataloader
 # from src.dataset import split_dataloader
-from src.data_loader import get_loader
+from src.data_utils.data_loader import get_loader
 
 """
 **Fast R-CNN에서 SGD를 쓰는 이유**
