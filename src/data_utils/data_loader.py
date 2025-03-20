@@ -2,7 +2,7 @@
 # 실행 방법 및 인자 설명 (터미널 기준)
 #
 # 사용법:
-#   python src/data_loader.py --mode <모드> --batch_size <배치 크기> [--debug]
+#   python src/data_utils/data_loader.py --mode <모드> --batch_size <배치 크기> [--debug] [--val_ratio <검증 비율>] [--seed <랜덤 시드>
 #
 # 파싱 인자 설명:
 # --mode (필수)  
@@ -21,15 +21,23 @@
 #   - 출력 예: 카테고리 매핑 정보, 총 데이터 수, Split 비율,  
 #              각 배치별 이미지 크기, 박스 정보, 라벨 등장 분포 등  
 #
+# --val_ratio (선택, default=0.2)  
+#   - 학습 및 검증 데이터셋 분할 시 검증 비율 설정 (0 ~ 1 사이 실수)  
+#   - ex) --val_ratio 0.25 → 전체 데이터 중 25%를 검증 데이터로 분할  
+#
+# --seed (선택, default=42)  
+#   - 무작위 split 및 DataLoader 생성 시 랜덤 시드 고정 값  
+#   - 디버깅이나 재현성 테스트 시 유용  
+#
 # 실행 예시 (터미널):
 # 1) 학습 데이터셋 로더 테스트
-#   python src/data_loader.py --mode train --batch_size 4 --debug
+#   python src/data_utils/data_loader.py --mode train --batch_size 4 --debug --val_ratio 0.2 --seed 42
 #
 # 2) 검증 데이터셋 로더 테스트
-#   python src/data_loader.py --mode val --batch_size 8 --debug
+#   python src/data_utils/data_loader.py --mode val --batch_size 8 --debug --val_ratio 0.2 --seed 42
 #
 # 3) 테스트 데이터셋 로더 테스트
-#   python src/data_loader.py --mode test --batch_size 16 --debug
+#   python src/data_utils/data_loader.py --mode test --batch_size 16 --debug
 #
 # 프로젝트 폴더 예시:
 # data/
@@ -64,9 +72,11 @@ def get_transforms(mode='train'):
     Returns:
         torchvision.transforms.v2.Compose: 변환 함수
     """
-    ################################################################
-    # 리사이즈 크기 설정해야함
-    #########################################
+
+    ################################################################################################################################
+    # 리사이즈 크기 설정해야할수도?
+    ################################################################################################################################
+
     if mode == 'train':
         return T.Compose([
             T.ToImage(), # PIL → TVImage 자동 변환
@@ -301,7 +311,7 @@ class PillDataset(Dataset):
                 'boxes': bboxes_tensor,
                 'labels': labels_tensor,
                 'image_id': image_id_tensor,
-                'area': areas_tensor,
+                'area': areas_tensor,       # 없는 경우가 존재함
                 'is_crowd': iscrowd_tensor,
                 'orig_size': orig_size_tensor,
                 'pill_names': pill_names
@@ -313,12 +323,10 @@ class PillDataset(Dataset):
 
         # 시험 분기 
         else:
+            # 이미지는 트랜스폼에서 자동적으로 증강됨
             if self.transform:
                 img = self.transform(img)
 
-########################################################################################################
-# test.py때에 수정이 필요해 보임
-            # 이미지, _ for in batch
             return img, img_file
 
 
@@ -384,7 +392,7 @@ class PillDataset(Dataset):
 
 ####################################################################################################
 # 4. 데이터 로더 함수
-def get_loader(img_dir, ann_dir, batch_size=16, mode="train", val_ratio=0.2, debug=False, seed=42):
+def get_loader(img_dir, ann_dir=None, batch_size=8, mode="train", val_ratio=0.2, debug=False, seed=42):
     """
     데이터 로더를 반환하는 함수
 
@@ -521,17 +529,38 @@ def get_loader(img_dir, ann_dir, batch_size=16, mode="train", val_ratio=0.2, deb
 
 ####################################################################################################
 # 5. 메인 시작    
+# if __name__ == "__main__":
+#     # argparse 시작
+#     parser = argparse.ArgumentParser(description="PillDataset DataLoader Debug Runner")
+#     parser.add_argument('--mode', type=str, default='train', choices=['train', 'val', 'test'], help="운영 모드")
+#     parser.add_argument('--batch_size', type=int, default=4, help="배치 크기")
+#     parser.add_argument('--debug', action='store_true', help="디버깅 모드 여부")
+#     parser.add_argument('--val_ratio', type=float, default=0.2, help="검증 데이터셋 비율 (0 ~ 1)")
+#     parser.add_argument('--seed', type=int, default=42, help="랜덤 시드 (재현성 보장)")
+    
+# ######################################################################################
+# # 추가인자에 맞춰서 수정하기
+#     # # ✅ 추가 인자 (아래 추가)
+#     # parser.add_argument('--resize', type=int, default=None, help="이미지 리사이즈 크기 (정사각형)")  # ⭐ 추가됨
+#     # parser.add_argument('--num_workers', type=int, default=4, help="DataLoader 병렬 처리 쓰레드 수")  # ⭐ 추가됨
+#     # parser.add_argument('--max_samples', type=int, default=None, help="데이터셋 일부만 사용 (디버깅용)")  # ⭐ 추가됨
+#     # parser.add_argument('--verbose_level', type=int, default=1, help="디버그 출력 단계 (0=없음, 1=기본, 2=상세)")  # ⭐ 추가됨
+#     # parser.add_argument('--output_dir', type=str, default='logs/', help="디버깅/매핑 저장 디렉토리")  # ⭐ 추가됨
+#     # parser.add_argument('--save_mapping', action='store_true', help="카테고리 매핑 테이블을 JSON 파일로 저장")  # ⭐ 추가됨
+#     args = parser.parse_args()
+#     # 변경 사항 끝
+
 if __name__ == "__main__":
     # argparse 시작
     parser = argparse.ArgumentParser(description="PillDataset DataLoader Debug Runner")
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'val', 'test'], help="운영 모드")
-    parser.add_argument('--batch_size', type=int, default=4, help="배치 크기")
+    parser.add_argument('--batch_size', type=int, default=8, help="배치 크기")
     parser.add_argument('--debug', action='store_true', help="디버깅 모드 여부")
     parser.add_argument('--val_ratio', type=float, default=0.2, help="검증 데이터셋 비율 (0 ~ 1)")
     parser.add_argument('--seed', type=int, default=42, help="랜덤 시드 (재현성 보장)")
     
 ######################################################################################
-# 추가인자에 맞춰서 수정하기
+# 추가인자에 맞춰서 수정하기src/test_frcnn.py
     # # ✅ 추가 인자 (아래 추가)
     # parser.add_argument('--resize', type=int, default=None, help="이미지 리사이즈 크기 (정사각형)")  # ⭐ 추가됨
     # parser.add_argument('--num_workers', type=int, default=4, help="DataLoader 병렬 처리 쓰레드 수")  # ⭐ 추가됨
@@ -542,16 +571,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # 변경 사항 끝
 
-    TRAIN_ROOT = "data/train_images"
-    TRAIN_ANN_DIR = "data/train_annots_modify"
-    TEST_ROOT = "data/test_images"
+#     TRAIN_ROOT = "data/train_images"
+#     TRAIN_ANN_DIR = "data/train_annots_modify"
+#     TEST_ROOT = "data/test_images"
 
-    # 선택한 모드에 맞춰 로더 실행 및 디버깅 테스트
-    if args.mode in ['train', 'val']:
-        loader = get_loader(TRAIN_ROOT, TRAIN_ANN_DIR, batch_size=args.batch_size, mode=args.mode, val_ratio=args.val_ratio, debug=args.debug, seed=args.seed)
-        print(f"{args.mode} loader 생성 완료.")
-    elif args.mode == 'test':
-        loader = get_loader(TEST_ROOT, None, batch_size=args.batch_size, mode=args.mode, debug=args.debug)
-        print("test loader 생성 완료.")
-    else:
-        raise ValueError("잘못된 mode 값입니다. 'train', 'val', 'test' 중 하나를 입력하세요.")
+#     # 선택한 모드에 맞춰 로더 실행 및 디버깅 테스트
+#     if args.mode in ['train', 'val']:
+#         loader = get_loader(TRAIN_ROOT, TRAIN_ANN_DIR, batch_size=args.batch_size, mode=args.mode, val_ratio=args.val_ratio, debug=args.debug, seed=args.seed)
+#         print(f"{args.mode} loader 생성 완료.")
+#     elif args.mode == 'test':
+#         loader = get_loader(TEST_ROOT, None, batch_size=args.batch_size, mode=args.mode, debug=args.debug)
+#         print("test loader 생성 완료.")
+#     else:
+#         raise ValueError("잘못된 mode 값입니다. 'train', 'val', 'test' 중 하나를 입력하세요.")
+
