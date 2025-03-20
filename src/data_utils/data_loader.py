@@ -2,7 +2,7 @@
 # 실행 방법 및 인자 설명 (터미널 기준)
 #
 # 사용법:
-#   python src/data_loader.py --mode <모드> --batch_size <배치 크기> [--debug]
+#   python src/data_utils/data_loader.py --mode <모드> --batch_size <배치 크기> [--debug] [--val_ratio <검증 비율>] [--seed <랜덤 시드>]
 #
 # 파싱 인자 설명:
 # --mode (필수)  
@@ -21,15 +21,23 @@
 #   - 출력 예: 카테고리 매핑 정보, 총 데이터 수, Split 비율,  
 #              각 배치별 이미지 크기, 박스 정보, 라벨 등장 분포 등  
 #
+# --val_ratio (선택, default=0.2)  
+#   - 학습 및 검증 데이터셋 분할 시 검증 비율 설정 (0 ~ 1 사이 실수)  
+#   - ex) --val_ratio 0.25 → 전체 데이터 중 25%를 검증 데이터로 분할  
+#
+# --seed (선택, default=42)  
+#   - 무작위 split 및 DataLoader 생성 시 랜덤 시드 고정 값  
+#   - 디버깅이나 재현성 테스트 시 유용  
+#
 # 실행 예시 (터미널):
 # 1) 학습 데이터셋 로더 테스트
-#   python src/data_loader.py --mode train --batch_size 4 --debug
+#   python src/data_utils/data_loader.py --mode train --batch_size 4 --debug --val_ratio 0.2 --seed 42
 #
 # 2) 검증 데이터셋 로더 테스트
-#   python src/data_loader.py --mode val --batch_size 8 --debug
+#   python src/data_utils/data_loader.py --mode val --batch_size 8 --debug --val_ratio 0.2 --seed 42
 #
 # 3) 테스트 데이터셋 로더 테스트
-#   python src/data_loader.py --mode test --batch_size 16 --debug
+#   python src/data_utils/data_loader.py --mode test --batch_size 16 --debug
 #
 # 프로젝트 폴더 예시:
 # data/
