@@ -537,7 +537,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=42, help="랜덤 시드 (재현성 보장)")
     
 ######################################################################################
-# 추가인자에 맞춰서 수정하기
+# 추가인자에 맞춰서 수정하기src/test_frcnn.py
     # # ✅ 추가 인자 (아래 추가)
     # parser.add_argument('--resize', type=int, default=None, help="이미지 리사이즈 크기 (정사각형)")  # ⭐ 추가됨
     # parser.add_argument('--num_workers', type=int, default=4, help="DataLoader 병렬 처리 쓰레드 수")  # ⭐ 추가됨
