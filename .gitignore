@@ -22,8 +22,8 @@ data/ai01-level1-project.zip
 data/*
 
 # 모델 폴더 무시
-models/*.pth
-
+models/*
+notebooks/*
 
 # 가상환경 폴더 무시
 pj1/
