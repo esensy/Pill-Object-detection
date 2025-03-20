@@ -26,7 +26,7 @@ def xyxy_to_xywh(boxes):
 
 #############################################################################################
 # 테스트 함수
-def test(img_dir, device='cpu', model_path=None, batch_size=16, threshold=0.5, debug=False):
+def test(img_dir, device='cpu', model_path=None, batch_size=8, threshold=0.5, debug=False):
     """
     테스트 함수 (test)
 
