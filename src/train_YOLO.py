@@ -2,12 +2,14 @@ import torch
 from tqdm import tqdm
 from src.data_utils.data_loader import get_loader, get_category_mapping
 # from utils import get_optimizer, get_scheduler  # utils.py에서 가져오기
+from src.utils import get_optimizer, get_scheduler
 from src.model_utils.basic_YOLO import get_yolov5  # YOLO 모델
+from ultralytics.utils.loss import ComputeLoss
 # from utils.torch_utils import select_device
 # from utils.general import increment_path
 # from utils.loss import ComputeLoss  # 손실 함수
 
-def train_YOLO(img_dir, ann_dir, batch_size=16, num_classes=80, num_epochs=5, lr=0.001, optimizer_name="sgd", scheduler_name="step", device="cpu", debug=False):
+def train_YOLO(img_dir, ann_dir, batch_size=8, num_epochs=5, lr=0.001, optimizer_name="sgd", scheduler_name="step", device="cpu", debug=False):
     # 데이터 로더 
     train_loader = get_loader(img_dir, ann_dir, batch_size, mode="train", val_ratio=0.2, debug=debug)
     val_loader = get_loader(img_dir, ann_dir, batch_size, mode="val", val_ratio=0.2, debug=debug)
@@ -19,7 +21,7 @@ def train_YOLO(img_dir, ann_dir, batch_size=16, num_classes=80, num_epochs=5, lr
     num_classes = len(name_to_idx)
 
     # YOLO 모델 정의
-    model = get_yolov5(model_path="yolov5s.pt", num_classes=num_classes, device=device)
+    model = get_yolov5(model_path="yolov5s.pt", num_classes=num_classes).to(device)
 
     # 옵티마이저 정의
     optimizer = get_optimizer(optimizer_name, model, lr=lr, weight_decay=0.0005)
