@@ -3,17 +3,6 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from tqdm import tqdm
-<<<<<<< HEAD
-from src.utils import get_optimizer
-from src.utils import get_scheduler
-from src.utils import calculate_iou
-from src.utils import calculate_ap
-from src.utils import evaluate_predictions_direct
-from src.data_utils.data_loader import get_loader
-from src.data_utils.data_loader import get_category_mapping
-from src.model_utils.basic_frcnn import save_model
-from src.model_utils.basic_frcnn import get_fast_rcnn_model
-=======
 from new_neo_project1.src.model_utils.basic_frcnn import get_fast_rcnn_model
 from new_neo_project1.src.model_utils.basic_frcnn import save_model
 from src.utils import get_optimizer
@@ -21,7 +10,6 @@ from src.utils import get_scheduler
 # from src.dataset import get_dataloader
 # from src.dataset import split_dataloader
 from src.data_utils.data_loader import get_loader
->>>>>>> 1e3419b756c068bbdf652ef4919e084edbfed8d1
 
 # 학습 함수 정의
 
