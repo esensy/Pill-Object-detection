@@ -2,6 +2,7 @@ import torch
 from tqdm import tqdm
 from src.data_utils.data_loader import get_loader, get_category_mapping
 <<<<<<< HEAD
+<<<<<<< HEAD
 # from utils import get_optimizer, get_scheduler  # utils.py에서 가져오기
 from src.utils import get_optimizer, get_scheduler
 from src.model_utils.basic_YOLO import get_yolov5  # YOLO 모델
@@ -19,6 +20,14 @@ from ultralytics.utils.loss import ComputeLoss
 
 def train_YOLO(img_dir, ann_dir, batch_size=8, num_epochs=5, lr=0.001, weight_decay=0.005, optimizer_name="sgd", scheduler_name="step", device="cpu", debug=False):
 >>>>>>> b0f46cd62ec674a29d6f86b8a68bf5b1b0dad278
+=======
+from utils import get_optimizer, get_scheduler  # utils.py에서 가져오기
+from src.model_utils.basic_YOLO import get_yolov5  # YOLO 모델
+from ultralytics.utils.loss import ComputeLoss
+
+
+def train_YOLO(img_dir, ann_dir, batch_size=8, num_epochs=5, lr=0.001, weight_decay=0.005, optimizer_name="sgd", scheduler_name="step", device="cpu", debug=False):
+>>>>>>> b97fd7c2fb54b3c11f696087439636ba8cbd1451
     # 데이터 로더 
     train_loader = get_loader(img_dir, ann_dir, batch_size, mode="train", val_ratio=0.2, debug=debug)
     val_loader = get_loader(img_dir, ann_dir, batch_size, mode="val", val_ratio=0.2, debug=debug)
