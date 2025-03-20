@@ -1,24 +1,22 @@
 from ultralytics import YOLO
 
-def get_yolov5(model_path="yolov5s.pt", num_classes=None, device='cpu'):
+def get_yolov5(model_path="yolov5s.pt", num_classes=None):
     """
     YOLOv5 모델 로드 함수
     
     Args:
         model_path (str): 사전 학습된 모델 경로 또는 모델 이름 (기본값: 'yolov5s.pt')
         num_classes (int, optional): 사용자 정의 클래스 수. 지정 시 head 레이어 수정
-        device (str, optional): 'cuda' 또는 'cpu'
         
     Returns:
         YOLO 모델 객체
     """
-    model = YOLO(model_path).to(device)  # pretrained load
+    model = YOLO(model_path)  # pretrained load
 
     if num_classes:
         # 클래스 수가 지정되면 head 수정
         model.model.nc = num_classes  
         model.model.names = [f'class_{i}' for i in range(num_classes)]  # 이름 초기화 (원하면 커스텀 가능)
-        model.model.to(device)
 
     return model
 
