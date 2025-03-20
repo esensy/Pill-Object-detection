@@ -73,7 +73,7 @@ def get_transforms(mode='train'):
         torchvision.transforms.v2.Compose: 변환 함수
     """
     ################################################################################################################################
-    # 리사이즈 크기 설정해야함
+    # 리사이즈 크기 설정해야할수도?
     ################################################################################################################################
     if mode == 'train':
         return T.Compose([
@@ -309,7 +309,7 @@ class PillDataset(Dataset):
                 'boxes': bboxes_tensor,
                 'labels': labels_tensor,
                 'image_id': image_id_tensor,
-                'area': areas_tensor,
+                'area': areas_tensor,       # 없는 경우가 존재함
                 'is_crowd': iscrowd_tensor,
                 'orig_size': orig_size_tensor,
                 'pill_names': pill_names

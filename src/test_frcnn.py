@@ -8,10 +8,25 @@ import pandas
 from src.data_utils.data_loader import get_loader, get_category_mapping
 from src.model_utils.basic_frcnn import get_fast_rcnn_model
 
+#############################################################################################
+# XYXY -> XYWH 형식 포맷
+def xyxy_to_xywh(boxes):
+    """
+    바운딩 박스 좌표를 XYXY 형식에서 XYWH 형식으로 변환합니다.
+
+    Args:
+        boxes (list): 각 요소가 [x_min, y_min, x_max, y_max] 형태의 박스 좌표 리스트
+
+    Returns:
+        list: 변환된 [x, y, width, height] 형태의 박스 좌표 리스트
+    """
+    return [[x1, y1, x2 - x1, y2 - y1] for x1, y1, x2, y2 in boxes]
+
+
 
 #############################################################################################
 # 테스트 함수
-def test(img_dir, device, model_path=None, batch_size=8, threshold=0.5, debug=False):
+def test(img_dir, device='cpu', model_path=None, batch_size=16, threshold=0.5, debug=False):
     """
     테스트 함수 (test)
 
@@ -101,6 +116,9 @@ def test(img_dir, device, model_path=None, batch_size=8, threshold=0.5, debug=Fa
                 # 스코어 필터링(confidence score >= threshold)
                 filtered = [(b, l, s) for b, l, s in zip(boxes, labels, scores) if s >= threshold]
                 boxes, labels, scores = zip(*filtered) if filtered else ([], [], [])
+
+                # xyxy -> xywh 변환
+                boxes = xyxy_to_xywh(boxes) if boxes else []
 
                 # 파일네임에서 .png 제거
                 image_id = os.path.splitext(file_name)[0]   # 확장자 제거
