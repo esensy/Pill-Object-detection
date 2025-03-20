@@ -1,0 +1,9 @@
+data/*
+!data/data_download.py
+
+models/*
+
+notebooks/*
+src/__pycache__/
+
+
