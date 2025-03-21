@@ -5,7 +5,7 @@ from src.predict_frcnn import predict
 
 """
 학습 실행
-python main.py --mode train --batch_size 16 --epochs 3 --optimizer sgd --scheduler plateau --lr 0.001 --weight_decay 0.0005
+python main.py --mode train --batch_size 8 --epochs 10 --optimizer sgd --scheduler plateau --lr 0.0001 --weight_decay 0.0005
 
 예측 실행
 python main.py --mode eval --image_path data/sample.jpg
