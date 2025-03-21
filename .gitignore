@@ -29,5 +29,5 @@ models/*
 # 가상환경 폴더 무시
 pj1/
 
-
+src/t.py
 
