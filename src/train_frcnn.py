@@ -3,13 +3,15 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from tqdm import tqdm
-from new_neo_project1.src.model_utils.basic_frcnn import get_fast_rcnn_model
-from new_neo_project1.src.model_utils.basic_frcnn import save_model
 from src.utils import get_optimizer
 from src.utils import get_scheduler
-# from src.dataset import get_dataloader
-# from src.dataset import split_dataloader
+from src.utils import calculate_iou
+from src.utils import calculate_ap
+from src.utils import evaluate_predictions_direct
 from src.data_utils.data_loader import get_loader
+from src.data_utils.data_loader import get_category_mapping
+from src.model_utils.basic_frcnn import save_model
+from src.model_utils.basic_frcnn import get_fast_rcnn_model
 
 # 학습 함수 정의
 
@@ -74,7 +76,7 @@ def train(img_dir, json_dir, batch_size=16, num_epochs=5, optimizer_name="sgd", 
     scheduler = get_scheduler(scheduler_name, optimizer, T_max=100)  # T_max는 cosine만 적용되는 파라미터
 
     best_map_score = 0
-    
+
     # 학습 루프
     for epoch in range(num_epochs):
         model.train()
@@ -96,6 +98,7 @@ def train(img_dir, json_dir, batch_size=16, num_epochs=5, optimizer_name="sgd", 
             loss_dict = model(images, formatted_targets)
             losses = sum(loss for loss in loss_dict.values())
 
+
             losses.backward()
 
             # Gradient Clipping 추가
@@ -113,6 +116,7 @@ def train(img_dir, json_dir, batch_size=16, num_epochs=5, optimizer_name="sgd", 
             # tqdm 진행 바의 postfix 업데이트
             avg_loss_details = ", ".join([f"{k}: {v / len(train_loader):.4f}" for k, v in epoch_loss_details.items()])
             progress_bar.set_postfix(Avg_Loss=avg_loss_details)
+
 
         avg_loss_details = ", ".join([f"{k}: {v / len(train_loader):.4f}" for k, v in epoch_loss_details.items()])
         print(f"Epoch {epoch+1} Complete - Total Loss: {total_loss:.4f}, Avg Loss Per Component: {avg_loss_details}")
@@ -158,6 +162,3 @@ def train(img_dir, json_dir, batch_size=16, num_epochs=5, optimizer_name="sgd", 
 
 if __name__ == "__main__":
     train(img_dir="data/train_images", json_dir="data/train_annots_modify", batch_size=16, num_epochs=5, lr=0.001, weight_decay=0.0005, device="cuda", debug=False)
-
-
-
