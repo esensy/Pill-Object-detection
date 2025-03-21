@@ -34,4 +34,4 @@ for i in range(len(categories)):
 sorted_dict = dict(sorted(cat_dict.items()))
 
 label_encoding = {idx: value for idx, (key, value) in enumerate(sorted_dict.items())}
-print("Label Encoding:", label_encoding)
+print(label_encoding)
