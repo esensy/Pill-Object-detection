@@ -2,7 +2,7 @@
 # 실행 방법 및 인자 설명 (터미널 기준)
 #
 # 사용법:
-#   python src/data_utils/data_loader.py --mode <모드> --batch_size <배치 크기> [--debug] [--val_ratio <검증 비율>] [--seed <랜덤 시드>]
+#   python src/data_utils/data_loader.py --mode <모드> --batch_size <배치 크기> [--debug] [--val_ratio <검증 비율>] [--seed <랜덤 시드>
 #
 # 파싱 인자 설명:
 # --mode (필수)  
@@ -72,9 +72,11 @@ def get_transforms(mode='train'):
     Returns:
         torchvision.transforms.v2.Compose: 변환 함수
     """
+
     ################################################################################################################################
     # 리사이즈 크기 설정해야할수도?
     ################################################################################################################################
+
     if mode == 'train':
         return T.Compose([
             T.ToImage(), # PIL → TVImage 자동 변환
@@ -148,7 +150,7 @@ def get_category_mapping(ann_dir):
 ####################################################################################################
 # 3. 데이터셋
 class PillDataset(Dataset):
-    def __init__(self, image_dir, ann_dir=None, mode='train', category_mapping=None, transform=None, debug=False):
+    def __init__(self, image_dir, ann_dir=None, mode='train', category_mapping=None, transform=None, bbox_format="XYXY", debug=False):
         """
         PillDataset 클래스
 
@@ -178,6 +180,8 @@ class PillDataset(Dataset):
             raise TypeError(f"category_mapping은 dict 타입이어야 합니다. 현재 타입: {type(category_mapping)}")
         if transform is not None and not callable(transform):
             raise TypeError(f"transform은 호출 가능 객체이어야 합니다. 현재 타입: {type(transform)}")
+        if not isinstance(bbox_format, str):
+            raise TypeError(f"bbox_format는 문자열(str)이어야 합니다. 현재 타입: {type(bbox_format)}")
         if not isinstance(debug, bool):
             raise TypeError(f"debug는 bool 타입이어야 합니다. 현재 타입: {type(debug)}")
         
@@ -187,6 +191,7 @@ class PillDataset(Dataset):
         self.mode = mode
         self.transform = transform
         self.category_mapping = category_mapping    # 카테고리 이름 <-> 아이디 매핑
+        self.bbox_format = bbox_format
 
         # 이미지
         self.images = sorted(os.listdir(image_dir))
@@ -288,12 +293,29 @@ class PillDataset(Dataset):
             areas = [obj["area"] for obj in ann["annotations"]]
             image_id = ann["images"][0]["id"]
 
-            # 텐서로 변환 tv_tensor
-            bboxes_tensor = BoundingBoxes(
-                torch.tensor(bboxes, dtype=torch.float32),
-                format="XYWH",
-                canvas_size=(img.height, img.width)
-            )
+            # Faster RCNN을 위한 bbox 형식 변환
+            if self.bbox_format == "XYXY":
+                bboxes_xyxy = []
+                for bbox in bboxes:
+                    xmin, ymin, width, height = bbox
+                    xmax = xmin + width
+                    ymax = ymin + height
+                    bboxes_xyxy.append([xmin, ymin, xmax, ymax])
+
+                # 텐서로 변환 tv_tensor
+                bboxes_tensor = BoundingBoxes(
+                    torch.tensor(bboxes_xyxy, dtype=torch.float32),
+                    format=self.bbox_format,
+                    canvas_size=(img.height, img.width)
+                )
+            # YOLO를 위한 bbox 형식 변환
+            elif self.bbox_format == "XYWH":
+                bboxes_tensor = BoundingBoxes(
+                    torch.tensor(bboxes, dtype=torch.float32),
+                    format=self.bbox_format,
+                    canvas_size=(img.height, img.width)
+                )
+            
             labels_tensor = torch.tensor(labels, dtype=torch.int64)
             areas_tensor = torch.tensor(areas, dtype=torch.float32)
             image_id_tensor = torch.tensor(image_id, dtype=torch.int64)
@@ -312,7 +334,7 @@ class PillDataset(Dataset):
                 'area': areas_tensor,       # 없는 경우가 존재함
                 'is_crowd': iscrowd_tensor,
                 'orig_size': orig_size_tensor,
-                'pill_names': pill_names
+                # 'pill_names': pill_names -> target에 str은 들어가면 안됨
             }
             
 
@@ -390,7 +412,7 @@ class PillDataset(Dataset):
 
 ####################################################################################################
 # 4. 데이터 로더 함수
-def get_loader(img_dir, ann_dir=None, batch_size=8, mode="train", val_ratio=0.2, debug=False, seed=42):
+def get_loader(img_dir, ann_dir=None, batch_size=8, mode="train", val_ratio=0.2, bbox_format="XYXY", debug=False, seed=42):
     """
     데이터 로더를 반환하는 함수
 
@@ -443,7 +465,7 @@ def get_loader(img_dir, ann_dir=None, batch_size=8, mode="train", val_ratio=0.2,
         name_to_idx, idx_to_name = None, None
 
     # 데이터셋
-    dataset = PillDataset(image_dir=img_dir, ann_dir=ann_dir, mode=mode, category_mapping=name_to_idx, transform=transforms, debug=debug)
+    dataset = PillDataset(image_dir=img_dir, ann_dir=ann_dir, mode=mode, category_mapping=name_to_idx, transform=transforms, bbox_format=bbox_format, debug=debug)
 
     # [DEBUG 추가]
     if debug and mode in ['train', 'val']:
@@ -527,6 +549,27 @@ def get_loader(img_dir, ann_dir=None, batch_size=8, mode="train", val_ratio=0.2,
 
 ####################################################################################################
 # 5. 메인 시작    
+# if __name__ == "__main__":
+#     # argparse 시작
+#     parser = argparse.ArgumentParser(description="PillDataset DataLoader Debug Runner")
+#     parser.add_argument('--mode', type=str, default='train', choices=['train', 'val', 'test'], help="운영 모드")
+#     parser.add_argument('--batch_size', type=int, default=4, help="배치 크기")
+#     parser.add_argument('--debug', action='store_true', help="디버깅 모드 여부")
+#     parser.add_argument('--val_ratio', type=float, default=0.2, help="검증 데이터셋 비율 (0 ~ 1)")
+#     parser.add_argument('--seed', type=int, default=42, help="랜덤 시드 (재현성 보장)")
+    
+# ######################################################################################
+# # 추가인자에 맞춰서 수정하기
+#     # # ✅ 추가 인자 (아래 추가)
+#     # parser.add_argument('--resize', type=int, default=None, help="이미지 리사이즈 크기 (정사각형)")  # ⭐ 추가됨
+#     # parser.add_argument('--num_workers', type=int, default=4, help="DataLoader 병렬 처리 쓰레드 수")  # ⭐ 추가됨
+#     # parser.add_argument('--max_samples', type=int, default=None, help="데이터셋 일부만 사용 (디버깅용)")  # ⭐ 추가됨
+#     # parser.add_argument('--verbose_level', type=int, default=1, help="디버그 출력 단계 (0=없음, 1=기본, 2=상세)")  # ⭐ 추가됨
+#     # parser.add_argument('--output_dir', type=str, default='logs/', help="디버깅/매핑 저장 디렉토리")  # ⭐ 추가됨
+#     # parser.add_argument('--save_mapping', action='store_true', help="카테고리 매핑 테이블을 JSON 파일로 저장")  # ⭐ 추가됨
+#     args = parser.parse_args()
+#     # 변경 사항 끝
+
 if __name__ == "__main__":
     # argparse 시작
     parser = argparse.ArgumentParser(description="PillDataset DataLoader Debug Runner")
@@ -535,6 +578,16 @@ if __name__ == "__main__":
     parser.add_argument('--debug', action='store_true', help="디버깅 모드 여부")
     parser.add_argument('--val_ratio', type=float, default=0.2, help="검증 데이터셋 비율 (0 ~ 1)")
     parser.add_argument('--seed', type=int, default=42, help="랜덤 시드 (재현성 보장)")
+    
+######################################################################################
+# 추가인자에 맞춰서 수정하기src/test_frcnn.py
+    # # ✅ 추가 인자 (아래 추가)
+    # parser.add_argument('--resize', type=int, default=None, help="이미지 리사이즈 크기 (정사각형)")  # ⭐ 추가됨
+    # parser.add_argument('--num_workers', type=int, default=4, help="DataLoader 병렬 처리 쓰레드 수")  # ⭐ 추가됨
+    # parser.add_argument('--max_samples', type=int, default=None, help="데이터셋 일부만 사용 (디버깅용)")  # ⭐ 추가됨
+    # parser.add_argument('--verbose_level', type=int, default=1, help="디버그 출력 단계 (0=없음, 1=기본, 2=상세)")  # ⭐ 추가됨
+    # parser.add_argument('--output_dir', type=str, default='logs/', help="디버깅/매핑 저장 디렉토리")  # ⭐ 추가됨
+    # parser.add_argument('--save_mapping', action='store_true', help="카테고리 매핑 테이블을 JSON 파일로 저장")  # ⭐ 추가됨
     args = parser.parse_args()
 
 #     TRAIN_ROOT = "data/train_images"
@@ -550,3 +603,4 @@ if __name__ == "__main__":
 #         print("test loader 생성 완료.")
 #     else:
 #         raise ValueError("잘못된 mode 값입니다. 'train', 'val', 'test' 중 하나를 입력하세요.")
+

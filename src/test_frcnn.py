@@ -96,7 +96,7 @@ def test(img_dir, device='cpu', model_path=None, batch_size=8, threshold=0.5, de
     model.eval()
 
     # 테스트 로더
-    test_loader = get_loader(img_dir=img_dir, batch_size=batch_size, mode='test', debug=debug)
+    test_loader = get_loader(img_dir=img_dir, batch_size=batch_size, mode='test', bbox_format="XYXY", debug=debug)
 
     # 결과물 리스트
     results = []
@@ -117,8 +117,8 @@ def test(img_dir, device='cpu', model_path=None, batch_size=8, threshold=0.5, de
                 filtered = [(b, l, s) for b, l, s in zip(boxes, labels, scores) if s >= threshold]
                 boxes, labels, scores = zip(*filtered) if filtered else ([], [], [])
 
-                # xyxy -> xywh 변환
-                boxes = xyxy_to_xywh(boxes) if boxes else []
+                # xyxy -> xywh 변환 ----------> get_loader 함수에서 이미 변환되어서 나옴
+                # boxes = xyxy_to_xywh(boxes) if boxes else []
 
                 # 파일네임에서 .png 제거
                 image_id = os.path.splitext(file_name)[0]   # 확장자 제거

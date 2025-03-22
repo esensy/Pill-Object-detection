@@ -72,4 +72,8 @@ def submission_csv(predictions, test_dir, submission_file_path=None, debug=False
 
     return submission_data
 
+<<<<<<< HEAD
 # submission_csv(predictions, args.test_dir, args.submission_file_path, args.debug)
+=======
+# submission_csv(predictions, args.test_dir, args.submission_file_path, args.debug)
+>>>>>>> d864277fd5d0a529165e2616e4411e27ae46bd4f
