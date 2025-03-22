@@ -4,6 +4,96 @@ import os
 import glob
 import torch
 
+def test_yolo_model(model, test_image_path, model_path=None, categories=None, debug=False, save_results=False):
+    """
+    YOLO 모델 테스트 함수
+    :param model: 학습된 YOLO 모델
+    :param test_image_path: 테스트 이미지 경로
+    :param model_path: 모델 가중치 경로 (선택)
+    :param categories: 클래스 정보 (dict)
+    :param debug: 디버그 모드 활성화 (True/False)
+    :param save_results: 예측된 이미지를 저장할지 여부 (True/False)
+    :return: 예측 결과 리스트
+    """
+    # 모델을 평가 모드로 전환
+    model.eval()
+    total_predictions = []
+
+    # 클래스 수가 지정되면 모델의 nc와 names 속성 수정
+    if categories:
+        model.model.nc = len(categories)
+        model.model.names = list(categories.values())  # 클래스 이름 초기화
+
+    # 이미지 경로 탐색 (다양한 포맷 대응)
+    image_paths = glob.glob(os.path.join(test_image_path, '*.[pjPj][pnPN][gG]'))
+
+    if not image_paths:
+        raise FileNotFoundError(f"이미지를 찾을 수 없습니다: {test_image_path}")
+
+    # 결과 저장 디렉토리 설정 (선택적)
+    result_dir = './data/test_results'
+    if save_results and not os.path.exists(result_dir):
+        os.makedirs(result_dir)
+
+    with torch.no_grad():
+        for idx, image_path in enumerate(image_paths):
+            img = cv2.imread(image_path)
+            if img is None:
+                print(f"이미지를 로드하지 못했습니다: {image_path}")
+                continue
+
+            # YOLO 모델 예측
+            results = model(img, verbose=debug)  # 각 이미지 예측마다 출력되는 정보를 보여줄지 여부
+            total_predictions.append(results)
+
+            # 디버그 모드에서 예측 결과 출력 및 시각화
+            if debug:
+                print(f"[{idx + 1}/{len(image_paths)}] {image_path} 예측 결과:")
+
+                if isinstance(results, list):
+                    for res in results:
+                        if hasattr(res, 'pandas'):
+                            try:
+                                boxes = res.pandas().xyxy[0]  # pandas DataFrame으로 변환
+                                print(boxes[['xmin', 'ymin', 'xmax', 'ymax', 'confidence', 'class', 'name']])
+                            except Exception as e:
+                                print(f"결과 출력 오류: {e}")
+                else:
+                    try:
+                        boxes = results.pandas().xyxy[0]  # pandas DataFrame으로 변환
+                        print(boxes[['xmin', 'ymin', 'xmax', 'ymax', 'confidence', 'class', 'name']])
+                    except Exception as e:
+                        print(f"결과 출력 오류: {e}")
+
+                # 이미지 시각화
+                if idx % 100 == 0:
+                    if isinstance(results, list):
+                        for res in results:
+                            if hasattr(res, 'show'):
+                                res.show()
+                    else:
+                        if hasattr(results, 'show'):
+                            results.show()
+
+            # 결과 이미지 저장 (선택적)
+            if save_results:
+                save_path = os.path.join(result_dir, f"result_{idx + 1}.jpg")
+                if isinstance(results, list):
+                    for res in results:
+                        if hasattr(res, 'save'):
+                            res.save(save_path)
+                else:
+                    if hasattr(results, 'save'):
+                        results.save(save_path)
+                print(f"결과 이미지 저장 완료: {save_path}")
+
+    return total_predictions
+
+# 모델과 테스트할 이미지 경로 설정
+image_paths = "./data/test_images"  # 테스트할 이미지 경로
+model_path = "yolov5su.pt"  # 모델 파일 경로
+
+
 categories = {0: '보령부스파정 5mg', 1: '뮤테란캡슐 100mg', 2: '일양하이트린정 2mg', 3: '기넥신에프정(은행엽엑스)(수출용)', 4: '무코스타정(레바미피드)(비매품)', 5: '알드린정', 
               6: '뉴로메드정(옥시라세탐)', 7: '타이레놀정500mg', 8: '에어탈정(아세클로페낙)', 9: '삼남건조수산화알루미늄겔정', 10: '타이레놀이알서방정(아세트아미노펜)(수출용)', 
               11: '삐콤씨에프정 618.6mg/병', 12: '조인스정 200mg', 13: '쎄로켈정 100mg', 14: '넥시움정 40mg', 15: '리렉스펜정 300mg/PTP', 16: '아빌리파이정 10mg', 17: '자이프렉사정 2.5mg', 
@@ -17,73 +107,52 @@ categories = {0: '보령부스파정 5mg', 1: '뮤테란캡슐 100mg', 2: '일�
               64: '신바로정', 65: '에스원엠프정 20mg', 66: '브린텔릭스정 20mg', 67: '글리틴정(콜린알포세 레이트)', 68: '제미메트서방정 50/1000mg', 69: '아토젯정 10/40mg', 70: '로수젯정10/5밀리그램', 
               71: '로수바미브정 10/20mg', 72: '카발린캡슐 25mg', 73: '케이캡정 50mg'}
 
-num_classes = len(categories)
-
-model_path = 'yolov5s.pt'  # 모델 경로
-
-cls_cat = [v for k, v in categories.items()]
-
-# print(cls_cat)
-model = YOLO(model_path)  # 예: 'yolov5s.pt'
-
-def test_yolo_model(model, model_path, test_image_path, categories=None):
-    
-    # YOLO 모델 로드
-
-    # 모델 eval 모드
-    model.eval()
-
-    if categories:
-    # 클래스 수가 지정되면 head 수정
-        model.model.nc = len(categories)
-        model.model.names = [v for k, v in categories.items()]  # 이름 초기화 (원하면 커스텀 가능)
-    # PNG 이미지 파일 경로 리스트 생성
-    image_paths = glob.glob(os.path.join(test_image_path, '*.png'))
-
-    if not image_paths:
-        raise FileNotFoundError(f"이미지를 찾을 수 없습니다: {test_image_path}/*.png")
-
-    with torch.no_grad():
-        for idx, image_path in enumerate(image_paths[:10]):
-            img = cv2.imread(image_path)
-            if img is None:
-                print(f"이미지를 로드하지 못했습니다: {image_path}")
-                continue
-
-            # YOLO 모델 예측
-            results = model(img)
-
-            print(f"예측 결과 ({image_path}):")
-            print(results)
-
-            # 결과 시각화: 리스트인 경우 개별적으로 접근
-            if isinstance(results, list):
-                for res in results:
-                    res.show()
-            else:
-                results.show()
-
-            # 예측 결과 정보 출력 (개별 결과에 대해 출력)
-            if hasattr(results, "names"):
-                print(f"Predicted Labels: {results.names}")  # 클래스 이름
-            if hasattr(results, "boxes"):
-                print(f"Predicted Boxes: {results.boxes.xywh}")  # 바운딩 박스 (x, y, width, height)
-                print(f"Predicted Scores: {results.boxes.conf}")  # Confidence score
-
-            # 최대 5개까지만 시각화
-            if idx == 5:
-                break
-
-        # 예측된 이미지 파일 저장 (선택적)
-        if hasattr(results, "save"):
-            results.save()  # 예측 결과 이미지 저장
-
-# 모델과 테스트할 이미지 경로 설정
-model_path = "yolov5s.pt"  # 모델 파일 경로
-image_paths = "./data/test_images"  # 테스트할 이미지 경로
 
 # YOLO 모델 로드
-model = YOLO(model_path).to("cuda" if torch.cuda.is_available() else "cpu")
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = YOLO(model_path)
+model.to(device)
 
 # YOLO 모델 테스트 실행
-test_yolo_model(model=model, model_path=model_path, test_image_path=image_paths, categories=categories)
+results = test_yolo_model(model, test_image_path=image_paths, model_path=model_path, categories=categories, debug=True, save_results=True)
+
+# 결과 저장 리스트 초기화
+submission = []
+
+# 결과 파싱
+for res in results:
+    names = res.names if hasattr(res, 'names') else []
+    
+    # Check if res is a list
+    if isinstance(res, list):
+        # If res is a list, iterate over each item and extract boxes and confidences
+        for item in res:
+            if hasattr(item, 'boxes'):
+                boxes = item.boxes.xywh.cpu().numpy() if hasattr(item.boxes, 'xywh') else []
+                confs = item.boxes.conf.cpu().numpy() if hasattr(item.boxes, 'conf') else []
+                names = item.names if hasattr(item, 'names') else []
+                
+                # Add the parsed data to submission
+                for name, box, conf in zip(names, boxes, confs):
+                    submission.append({
+                        "name": name,
+                        "box": box.tolist(),  # numpy 배열을 리스트로 변환
+                        "conf": float(conf)  # numpy 값을 float으로 변환
+                    })
+    else:
+        # If res is a single prediction object, process it directly
+        if hasattr(res, 'boxes'):
+            boxes = res.boxes.xywh.cpu().numpy() if hasattr(res.boxes, 'xywh') else []
+            confs = res.boxes.conf.cpu().numpy() if hasattr(res.boxes, 'conf') else []
+            names = res.names if hasattr(res, 'names') else []
+
+            # Add the parsed data to submission
+            for name, box, conf in zip(names, boxes, confs):
+                submission.append({
+                    "name": name,
+                    "box": box.tolist(),  # numpy 배열을 리스트로 변환
+                    "conf": float(conf)  # numpy 값을 float으로 변환
+                })
+
+# Print the first submission entry to check
+print(submission[0])
