@@ -207,7 +207,7 @@ def calculate_ap(predictions, targets, iou_threshold=0.5):
     # AP 계산 (Precision-Recall Curve의 면적)
     ap = np.trapz(precision, recall)  # 면적 계산 (곡선 아래 면적)
     
-    return ap
+    return precision, recall, ap
 
 # mAP 계산 함수
 def calculate_map(predictions, targets, num_classes, iou_threshold=0.5):
@@ -219,14 +219,14 @@ def calculate_map(predictions, targets, num_classes, iou_threshold=0.5):
         class_targets = [t for t in targets if class_id in t['labels']]
         
         # 해당 클래스에 대해 AP 계산
-        ap = calculate_ap(class_predictions, class_targets, iou_threshold)
+        precision, recall, ap = calculate_ap(class_predictions, class_targets, iou_threshold)
         ap_values.append(ap)
     
     # mAP는 모든 클래스의 AP의 평균
     map_score = np.mean(ap_values)
-    return map_score
+    return map_score, precision, recall
 
-# 시각화 함수수
+# 시각화 함수
 def draw_bbox(ax, box, text, color):
     """
     - ax: matplotlib Axes 객체
@@ -251,3 +251,79 @@ def draw_bbox(ax, box, text, color):
         weight="bold",
         fontsize=13,
     )
+
+# f1 스코어 계산 함수 
+def f1_score(precision, recall):
+    score = 2 * ((precision * recall)/ (precision + recall))
+
+    return score
+
+import numpy as np
+def visualization(results, page_size=20, page=0, debug=True):
+    total_num = len(results)
+    start_idx = page * page_size
+    end_idx = min(start_idx + page_size, total_num)
+
+    print(f"페이지 {page + 1} / {np.ceil(total_num / page_size).astype(int)} | {start_idx} - {end_idx}번째 이미지 표시")
+
+    num_images = min(total_num, 20)
+    row_img = max(num_images // 4, 1)
+    col_img = max(num_images // row_img, 1)
+    figsize = (5 * col_img, 5 * row_img)
+
+    print(f"페이지 당 {row_img} 행, {col_img} 열 형태의 이미지 플롯")
+
+    fig, ax = plt.subplots(row_img, col_img, figsize=figsize)
+
+    if row_img == 1 or col_img == 1:
+        ax = np.expand_dims(ax, axis=0)  
+        
+    for i in range(start_idx, end_idx):
+        file_name = results[i]['file_name']
+        image_id = results[i]['category_id']
+        boxes = results[i]['boxes']
+        bbox_num = len(boxes)
+        path = os.path.join('../data/test_images', file_name)
+        dr_name = [idx_to_name[id] for id in image_id]
+
+        if debug:
+            print(f"[{i + 1}] Visualize Image: {file_name}, DRUG ID: {image_id}, BBox Num: {bbox_num}")
+
+
+        if not os.path.exists(path):
+            print(f"[Error] 이미지 경로를 찾을 수 없습니다: {path}")
+            continue 
+
+        image = cv2.imread(path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        ax_idx = i - start_idx
+        ax_row = ax_idx // col_img
+        ax_col = ax_idx % col_img
+
+        ax[ax_row, ax_col].imshow(image)
+
+        for j in range(bbox_num):
+            ax[ax_row, ax_col].add_patch(
+                plt.Rectangle(
+                    (boxes[j][0], boxes[j][1]),
+                    boxes[j][2] - boxes[j][0],
+                    boxes[j][3] - boxes[j][1],
+                    fill=False,
+                    edgecolor='red',
+                    linewidth=2
+                )
+            )
+            ax[ax_row, ax_col].annotate(
+                text=dr_name[j],
+                xy=(boxes[j][0] - 10, boxes[j][1] - 10),
+                color="red",
+                weight="bold",
+                fontsize=8
+            )
+
+        ax[ax_row, ax_col].axis("off")
+        ax[ax_row, ax_col].set_title(f"{file_name}")
+
+    plt.tight_layout()
+    plt.show()

@@ -24,7 +24,7 @@ from tqdm import tqdm
 # 내부 모듈듈
 from src.utils import get_optimizer
 from src.utils import get_scheduler
-from src.utils import calculate_map
+from src.utils import calculate_map, f1_score
 from src.data_utils.data_loader import get_loader
 from src.data_utils.data_loader import get_category_mapping
 from src.model_utils.basic_frcnn import save_model
@@ -69,13 +69,11 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
     val_loader = get_loader(img_dir, json_dir, batch_size, mode="val", val_ratio=0.2, bbox_format="XYXY", debug=debug)
 
     # 모델 및 학습 설정
-    model = get_fast_rcnn_model(num_classes + 1).to(device)
+    model = get_fast_rcnn_model(num_classes).to(device)
     optimizer = get_optimizer(optimizer_name, model, lr, weight_decay)
     scheduler = get_scheduler(scheduler_name, optimizer, gamma=0.1, T_max=100) # T_max는 CosineAnnealingLR에서만 사용
 
     # 검증 데이터셋 평가
-    best_map_score = 0
-
     best_map_score = 0
     
     # 학습 루프
@@ -114,18 +112,19 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
         with torch.no_grad():
             model.eval()
             total_mAP = []
+            total_f1 = []
             for images, targets in tqdm(val_loader, desc="Validation", dynamic_ncols=True):
                 # 이미지와 타겟을 GPU로 이동
                 images = [img.to(device) for img in images]
 
                 predictions = model(images)
 
-                mAP = calculate_map(predictions, targets, num_classes=num_classes, iou_threshold=0.5)
+                mAP, precision, recall = calculate_map(predictions, targets, num_classes=num_classes, iou_threshold=0.5)
+                f1 = f1_score(precision, recall)
                 total_mAP.append(mAP)
+                total_f1.append(f1)
 
-            print(f"Total_mAP: {np.mean(total_mAP):.4f}")
-            
-                
+            print(f"Total_mAP: {np.mean(total_mAP):.4f}, Total_f1_score: {np.mean(total_f1):.4f}")
 
         # 모델 저장
         if mAP > best_map_score:
