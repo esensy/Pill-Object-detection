@@ -79,7 +79,7 @@ if __name__ == "__main__":
 # txt 파일생성  (이미지 경로랑 어떤이미지인지 파일이름들이 들어가있음)
 from sklearn.model_selection import train_test_split
 import os
-def create_txt_file(txt_name, image_folder='data/train_images', output_folder='data/YOLO_yaml', val_ratio=0.2, seed=42):
+def create_txt_file(txt_name, image_folder='data/train_images', output_folder='data/val_labels_YOLO', val_ratio=0.2, seed=42):
 
     # 이미지 파일 목록 가져오기
     image_files = [f for f in os.listdir(image_folder) if f.lower().endswith(('.png'))]
@@ -91,12 +91,12 @@ def create_txt_file(txt_name, image_folder='data/train_images', output_folder='d
     os.makedirs(output_folder, exist_ok=True)
 
     # 학습 데이터셋 파일 경로 저장
-    with open(f"data/YOLO_yaml/{txt_name}.txt", "w") as f:
+    with open(f"data/val_labels_YOLO/{txt_name}.txt", "w") as f:
         for file in train_files:
             f.write(file + '\n')
 
     # 검증 데이터셋 파일 경로 저장
-    with open(f"data/YOLO_yaml/{txt_name}.txt", "w") as f:
+    with open(f"data/val_labels_YOLO/{txt_name}.txt", "w") as f:
         for file in val_files:
             f.write(file + '\n')
 
@@ -105,7 +105,7 @@ def create_txt_file(txt_name, image_folder='data/train_images', output_folder='d
 import yaml
 from src.data_utils.data_loader import get_category_mapping
 
-def make_yaml_file(YOLO_dataset_name='yolo_dataset_1', output_dir=os.path.join("data", "YOLO_yaml"), ):
+def make_yaml_file(YOLO_dataset_name='yolo_dataset_1', output_dir=os.path.join("data", "yaml_YOLO"), ):
     """
     YOLO 모델 학습을 위한 data.yaml 파일을 생성하는 함수.
     args:
@@ -113,7 +113,7 @@ def make_yaml_file(YOLO_dataset_name='yolo_dataset_1', output_dir=os.path.join("
         output_path (str): 생성될 YAML 파일 경로 (기본값: dataset.yaml)
     """
     # YAML 파일 경로 설정
-    if not os.path.exists(output_dir):  # YOLO_yaml 폴더가 없는 경우 생성
+    if not os.path.exists(output_dir):  # val_labels_YOLO 폴더가 없는 경우 생성
         os.makedirs(output_dir)
     yaml_file_dir = os.path.join(output_dir, f"{YOLO_dataset_name}.yaml")
     
@@ -123,13 +123,9 @@ def make_yaml_file(YOLO_dataset_name='yolo_dataset_1', output_dir=os.path.join("
     class_names = [name for name in idx_to_name.values()]
 
     # train:과 val:이 같은 폴더를 가리키므로, YOLO가 _val.txt, _train.txt을 참조해 자동으로 이미지를 찾을 수 있습니다. 확인(-)
-    create_txt_file(f"{YOLO_dataset_name}_train")
-
-
-    
     data = {
-        "train": f"data/YOLO_yaml/{YOLO_dataset_name}_train.txt",  
-        "val": f"data/YOLO_yaml/{YOLO_dataset_name}_val.txt", 
+        "train": f"data/train.txt",  
+        "val": f"data/val.txt", 
         "nc": len(class_names),
         "names": {i: name for i, name in enumerate(class_names)}
     }
