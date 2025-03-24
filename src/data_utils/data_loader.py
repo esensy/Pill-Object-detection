@@ -127,10 +127,6 @@ def get_category_mapping(ann_dir):
         raise FileNotFoundError(f"ann_dir 경로가 존재하지 않습니다: {ann_dir}")
     
     id_to_name = {}
-
-###########################################################################################
-# txt 를 위한 수정
-
     # 어노테이션 폴더 내 파일 순회
     for file in os.listdir(ann_dir):
         file_path = os.path.join(ann_dir, file)
@@ -141,16 +137,6 @@ def get_category_mapping(ann_dir):
                 ann = json.load(f)
                 for cat in ann.get('categories', []):
                     id_to_name[cat['id']] = cat['name']
-
-        elif file.endswith(".txt"):
-            # TXT 파일 처리 (YOLO 형식)
-            with open(file_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    parts = line.strip().split()
-                    if len(parts) > 0:
-                        class_id = parts[0]  # 첫 번째 값이 클래스 ID
-                        id_to_name[int(class_id)] = f"Class_{class_id}"  # 임시 네이밍
-###########################################################################################
 
     # 이름 기준 정렬
     sorted_names = sorted(set(id_to_name.values())) # 중복 제거 후 정렬
