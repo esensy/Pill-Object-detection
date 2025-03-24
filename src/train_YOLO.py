@@ -8,7 +8,7 @@ import torch
 from tqdm import tqdm
 import os
 from src.data_utils.data_loader import get_loader, get_category_mapping
-from utils import get_optimizer, get_scheduler  # utils.py에서 가져오기
+from src.utils import get_optimizer, get_scheduler  # utils.py에서 가져오기
 # from src.model_utils.basic_YOLO import get_yolov5  # YOLO 모델
 # from ultralytics.yolo.utils.loss import ComputeLoss - 이 놈이 너무 문제여서 git clone으로 가져옴
 ############################################# 추가
@@ -89,7 +89,7 @@ def train_YOLO(img_dir, ann_dir, batch_size=8, num_epochs=5, lr=0.001, weight_de
                 val_loss += loss.item()
                 val_bar.set_postfix(val_loss=loss.item())
 
-        print(f"📉 Epoch {epoch+1} - Train Loss: {total_loss:.4f}, Val Loss: {val_loss:.4f}")
+        print(f"Epoch {epoch+1} - Train Loss: {total_loss:.4f}, Val Loss: {val_loss:.4f}")
         
         if scheduler_name == "plateau":
             scheduler(val_loss)
@@ -99,7 +99,7 @@ def train_YOLO(img_dir, ann_dir, batch_size=8, num_epochs=5, lr=0.001, weight_de
         # ✅ 최적 모델 저장
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            print(f"✅ 검증 손실 개선됨! 모델 저장 중... (Best Val Loss: {best_val_loss:.4f})")
+            print(f"검증 손실 개선됨.. 모델 저장 중... (Best Val Loss: {best_val_loss:.4f})")
             save_model(model, epoch, best_val_loss)  # 모델 저장
 
 def save_model(model, epoch, val_loss):
@@ -108,9 +108,18 @@ def save_model(model, epoch, val_loss):
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, f"yolov5_epoch_{epoch}_val_{val_loss:.4f}.pt")
     torch.save(model.state_dict(), save_path)
-    print(f"✅ 모델 저장 완료: {save_path}")
+    print(f"모델 저장 완료: {save_path}")
 
 
 if __name__ == "__main__":
-    train_YOLO(img_dir="data/train_images", ann_dir="data/train_labels", device="cuda" if torch.cuda.is_available() else "cpu")
-    
+    # train_YOLO(img_dir="data/train_images", ann_dir="data/train_labels", device="cuda" if torch.cuda.is_available() else "cpu")
+    from ultralytics import YOLO
+    model = YOLO('yolov5s.pt')
+    model.train(
+        data='data.yaml',
+        epochs=5,
+        imgsz=640,
+        batch=8,
+        patience=10,
+        save=True,
+    )
