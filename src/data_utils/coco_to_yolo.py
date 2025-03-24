@@ -9,6 +9,7 @@
 import json
 import os
 import argparse
+from src.data_utils.data_loader import get_category_mapping
 
 def convert_coco_to_yolo(json_file, output_dir):
     """
@@ -22,6 +23,8 @@ def convert_coco_to_yolo(json_file, output_dir):
         None
     """
     os.makedirs(output_dir, exist_ok=True)
+    ANN_DIR = "data/train_annots_modify"
+    name_to_idx, _ = get_category_mapping(ANN_DIR)
 
     with open(json_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -29,15 +32,19 @@ def convert_coco_to_yolo(json_file, output_dir):
     for img in data["images"]:
         img_id = img["id"]
         img_w, img_h = img["width"], img["height"]
-        label_dir = os.path.join(output_dir, f"{img['txt_name'].replace('.png', '.txt')}")
+        label_path = os.path.join(output_dir, f"{img['file_name'].replace('.png', '.txt')}")
 
-        with open(label_dir, "w", encoding="utf-8") as f:
+        with open(label_path, "w", encoding="utf-8") as f:
             for ann in data["annotations"]:
                 if ann["image_id"] == img_id:
                     x, y, w, h = ann["bbox"]
                     x_center, y_center = (x + w / 2) / img_w, (y + h / 2) / img_h
                     w, h = w / img_w, h / img_h
-                    f.write(f"{ann['category_id']} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
+
+                    for category in data['categories']:
+                        if ann["category_id"] == category["id"]:
+                            category_id = name_to_idx[category['name']]
+                            f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
 
 def process_all_json(json_folder, output_dir):
     """
@@ -61,19 +68,13 @@ def process_all_json(json_folder, output_dir):
 
     # 변환 진행
     for i, json_file in enumerate(json_files, start=1):
-        json_dir = os.path.join(json_folder, json_file)
-        convert_coco_to_yolo(json_dir, output_dir)
+        json_path = os.path.join(json_folder, json_file)
+        convert_coco_to_yolo(json_path, output_dir)
 
 
     print("🎉 모든 JSON 파일 변환 완료!")
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Convert COCO JSON annotations to YOLO format")
-    parser.add_argument("--json_folder", type=str, required=True, help="Folder containing COCO JSON files")
-    parser.add_argument("--output_dir", type=str, required=True, help="Output directory for YOLO label files")
-    args = parser.parse_args()
 
-    process_all_json(args.json_folder, args.output_dir)
 
 ################ YOLO 모델 학습을 위한 data.yaml 파일을 생성하는 함수. ################
 # txt 파일생성  (이미지 경로랑 어떤이미지인지 파일이름들이 들어가있음)
@@ -142,3 +143,14 @@ def make_yaml_file(YOLO_dataset_name='yolo_dataset_1', output_dir=os.path.join("
 
     print(f"✅ {yaml_file_dir} 파일이 생성되었습니다.")
 
+###########################################################################################
+
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Convert COCO JSON annotations to YOLO format")
+    parser.add_argument("--json_folder", type=str, default="data/train_annots_modify", required=True, help="Folder containing COCO JSON files")
+    parser.add_argument("--output_dir", type=str, default="data/train_labels_YOLO", required=True, help="Output directory for YOLO label files")
+    args = parser.parse_args()
+
+    process_all_json(args.json_folder, args.output_dir)
