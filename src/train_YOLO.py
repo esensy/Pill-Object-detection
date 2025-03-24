@@ -44,6 +44,9 @@ def train_YOLO(img_dir, ann_dir, batch_size=8, num_epochs=5, lr=0.001, weight_de
 
     compute_loss = ComputeLoss(model.model)
 
+    # 학습률 스케줄러 정의
+    scheduler = get_scheduler(scheduler_name, optimizer)
+
     best_val_loss = float("inf")
 
     # 학습 루프
@@ -54,25 +57,9 @@ def train_YOLO(img_dir, ann_dir, batch_size=8, num_epochs=5, lr=0.001, weight_de
 
         train_bar = tqdm(train_loader, total=len(train_loader), desc=f"🟢 Training {epoch+1}/{num_epochs}")
         # 학습 단계
-        for imgs, targets in train_bar:
+        for batch_i, (imgs, targets) in tqdm(enumerate(train_loader), total=len(train_loader), desc="Training"):
             imgs = imgs.to(device)
-
-#############################################################################################
-            # 데이터셋 타겟은
-            # targets = {
-            #     'boxes': bboxes_tensor,
-            #     'labels': labels_tensor,
-            #     'image_id': image_id_tensor,
-            #     'area': areas_tensor,      \
-            #     'is_crowd': iscrowd_tensor,
-            #     'orig_size': orig_size_tensor,
-            #     'pill_names': pill_names
-            # }
-            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-#############################################################################################
-            # 모델 타겟과 어느정도 일치하는지 확인 필요
-            preds = model(imgs)
-            loss, loss_items = compute_loss(preds, targets)
+            targets = targets.to(device)
 
             # 모델 학습
             optimizer.zero_grad()
@@ -95,9 +82,7 @@ def train_YOLO(img_dir, ann_dir, batch_size=8, num_epochs=5, lr=0.001, weight_de
             val_bar = tqdm(val_loader, total=len(val_loader), desc=f"🔵 Validation {epoch+1}/{num_epochs}")
             for imgs, targets in val_bar:
                 imgs = imgs.to(device)
-#############################################################################################
-                # 데이터셋 타겟 확인 필요
-                targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+                targets = targets.to(device)
 
                 preds = model(imgs)
                 loss, _ = compute_loss(preds, targets)

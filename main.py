@@ -1,11 +1,11 @@
 import argparse
 import torch
 from src.train_frcnn import train
-from src.predict_frcnn import predict
+from src.test_frcnn import test
 
 """
 학습 실행
-python main.py --mode train --batch_size 16 --epochs 3 --optimizer sgd --scheduler plateau --lr 0.001 --weight_decay 0.0005
+python main.py --mode train --batch_size 8 --epochs 10 --optimizer sgd --scheduler plateau --lr 0.0001 --weight_decay 0.0005
 
 예측 실행
 python main.py --mode eval --image_path data/sample.jpg
@@ -17,7 +17,7 @@ def main():
     parser = argparse.ArgumentParser(description="Fast R-CNN Object Detection")
     
     # 공통 인자
-    parser.add_argument("--mode", type=str, choices=["train", "predict"], required=True, help="모드를 선택하세요: train 또는 predict")
+    parser.add_argument("--mode", type=str, choices=["train", "test"], required=True, help="모드를 선택하세요: train 또는 predict")
 
     # Train 모드 인자
     parser.add_argument("--img_dir", type=str, default="data/train_images", help="이미지 폴더 경로")
@@ -51,15 +51,15 @@ def main():
             debug=args.debug
         )
 
-    elif args.mode == "predict":
+    elif args.mode == "test":
         if not args.image_path:
-            print("predict 모드에서는 --image_path를 지정해야 합니다.")
+            print("test 모드에서는 --image_path를 지정해야 합니다.")
             return
         if not args.model_path:
-            print("predict 모드에서는 --model_path를 지정해야 합니다.")
+            print("test 모드에서는 --model_path를 지정해야 합니다.")
             return
 
-        predict(
+        test(
             image_path=args.image_path,
             model_path=args.model_path,
             device=args.device
@@ -67,3 +67,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
