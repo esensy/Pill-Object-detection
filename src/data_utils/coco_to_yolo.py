@@ -42,8 +42,9 @@ def convert_coco_to_yolo(json_file, output_dir):
                     w, h = w / img_w, h / img_h
 
                     for category in data['categories']:
-                        category_id = name_to_idx[category['name']]
-                        f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
+                        if ann["category_id"] == category["id"]:
+                            category_id = name_to_idx[category['name']]
+                            f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
 
 def process_all_json(json_folder, output_dir):
     """
