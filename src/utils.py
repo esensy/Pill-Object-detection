@@ -2,11 +2,9 @@ import numpy as np
 import os
 import cv2
 from matplotlib import pyplot as plt
+import torch
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
-import torch
-from torchvision.ops import box_iou
-from sklearn.metrics import average_precision_score
 
 # 옵티마이저 생성 함수
 def get_optimizer(name, model, lr=1e-3, weight_decay=0):
@@ -142,7 +140,7 @@ def calculate_ap(predictions, targets, iou_threshold=0.5):
         recall = recall[:min_len]
     
     ap = np.trapz(precision, recall)  # 면적 계산
-    return ap
+    return ap, precision, recall
 
 # mAP 계산 함수
 def calculate_map(predictions, targets, num_classes, iou_threshold=0.5):
