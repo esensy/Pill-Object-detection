@@ -1,4 +1,5 @@
 from ultralytics import YOLO
+from pathlib import Path
 
 def get_yolov5(model_path="yolov5s.pt", num_classes=None):
     """
@@ -11,6 +12,7 @@ def get_yolov5(model_path="yolov5s.pt", num_classes=None):
     Returns:
         YOLO 모델 객체
     """
+    model_path = Path(model_path)
     model = YOLO(model_path)  # pretrained load
 
     if num_classes:
@@ -19,6 +21,7 @@ def get_yolov5(model_path="yolov5s.pt", num_classes=None):
         model.model.names = [f'class_{i}' for i in range(num_classes)]  # 이름 초기화 (원하면 커스텀 가능)
 
     return model
+
 
 
 
