@@ -6,7 +6,7 @@ from src.utils import visualization
 
 """
 학습 실행
-python main.py --mode train --batch_size 5 --epochs 30 --optimizer sgd --scheduler plateau --lr 0.001 --weight_decay 0.0005
+python main.py --mode train --batch_size 4 --epochs 30 --optimizer sgd --scheduler plateau --lr 0.001 --weight_decay 0.0005
 
 예측 실행
 python main.py --mode test --img_dir "data/test_images"  --> 기본 실행

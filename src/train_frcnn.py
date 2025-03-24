@@ -63,8 +63,8 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
 
     # 데이터 로드 및 클래스 매핑
     name_to_idx, idx_to_name = get_category_mapping(json_dir)
+    print(name_to_idx)
     num_classes = len(name_to_idx)
-
     train_loader, val_loader = get_loader(img_dir, json_dir, batch_size, mode="train", val_ratio=0.2, bbox_format="XYXY", debug=debug)
 
     # 모델 및 학습 설정
@@ -111,7 +111,6 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
         # 검증
         with torch.no_grad():
             model.eval()
-            total_mAP = []
             predictions = []
             targets_list = []
             for images, targets in tqdm(val_loader, desc="Validation", dynamic_ncols=True):

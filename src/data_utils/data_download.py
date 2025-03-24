@@ -133,8 +133,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Data download and annotation wrap")
     # default 저장 루트를 확인
     parser.add_argument('--download_path', type=str, default="./data", help='Download Path(default: ./data)')
-    parser.add_argument('--download', type=bool, default=False, help='Download Preference')
-    parser.add_argument('--extract', type=bool, default=False, help='Extract Preference')
+    parser.add_argument('--download', type=bool, default=True, help='Download Preference')
+    parser.add_argument('--extract', type=bool, default=True, help='Extract Preference')
     args = parser.parse_args()
 
     download_data(args.download_path, args.download, args.extract)
