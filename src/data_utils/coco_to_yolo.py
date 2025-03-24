@@ -1,7 +1,7 @@
 ################################################################################################
 # 데이터 다운 -> data loader 실행 -> json modify 실행 -> coco to yolo 순서
 # 실행 코드
-# python coco_to_yolo.py --json_folder data/train_annots_modify --output_dir data/train_labels_YOLO
+# python coco_to_yolo.py --json_folder data/train_annots_modify --output_dir data/train_labels
 # category_id x_center y_center width height + 좌표 정규화
 # 이렇게 바꿔놓아야 YOLO에서 돌아간다고 합니다
 # ###############################################################################################
@@ -77,7 +77,7 @@ def process_all_json(json_folder, output_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert COCO JSON annotations to YOLO format")
     parser.add_argument("--json_folder", type=str, default="data/train_annots_modify", help="Folder containing COCO JSON files")
-    parser.add_argument("--output_dir", type=str, default="data/train_labels_YOLO", help="Output directory for YOLO label files")
+    parser.add_argument("--output_dir", type=str, default="data/train_labels", help="Output directory for YOLO label files")
     args = parser.parse_args()
 
     process_all_json(args.json_folder, args.output_dir)
