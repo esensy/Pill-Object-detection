@@ -3,6 +3,12 @@ import cv2
 import os
 import glob
 import torch
+from src.data_utils import get_category_mapping
+
+# 카테고리 매핑 정보 로드
+ann_dir = './data/train_annots_modify'
+name_to_idx, idx_to_name = get_category_mapping()
+
 
 def test_yolo_model(model, test_image_path, model_path=None, categories=None, debug=False, save_results=False):
     """
