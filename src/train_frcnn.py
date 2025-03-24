@@ -120,7 +120,6 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
             for images, targets in tqdm(val_loader, desc="Validation", dynamic_ncols=True):
                 # 이미지와 타겟을 GPU로 이동
                 images = [img.to(device) for img in images]
-                formatted_targets = format_bbox(targets, device)
 
                 predictions = model(images)
 
