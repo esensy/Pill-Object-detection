@@ -71,7 +71,7 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
     # 모델 및 학습 설정
     model = get_fast_rcnn_model(num_classes).to(device)
     optimizer = get_optimizer(optimizer_name, model, lr, weight_decay)
-    scheduler = get_scheduler(scheduler_name, optimizer, gamma=0.1, T_max=100) # T_max는 CosineAnnealingLR에서만 사용
+    scheduler = get_scheduler(scheduler_name, optimizer, step_size=5, gamma=0.1, T_max=100) # T_max는 CosineAnnealingLR에서만 사용
 
     # 검증 데이터셋 평가
     best_map_score = 0
@@ -91,6 +91,7 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
 
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
+
 
             losses.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -112,29 +113,45 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
         with torch.no_grad():
             model.eval()
             total_mAP = []
-            total_f1 = []
+            predictions = []
+            targets_list = []
             for images, targets in tqdm(val_loader, desc="Validation", dynamic_ncols=True):
-                # 이미지와 타겟을 GPU로 이동
+
                 images = [img.to(device) for img in images]
 
-                predictions = model(images)
+                outputs = model(images)
 
-                mAP, precision, recall = calculate_map(predictions, targets, num_classes=num_classes, iou_threshold=0.5)
-                f1 = f1_score(precision, recall)
-                total_mAP.append(mAP)
-                total_f1.append(f1)
+                # 예측값 정리
+                for output in outputs:
+                    predictions.append({
+                        'boxes': output['boxes'].cpu().numpy().tolist(),
+                        'labels': output['labels'].cpu().numpy().tolist(),
+                        'scores': output['scores'].cpu().numpy().tolist()
+                    })
 
-            print(f"Total_mAP: {np.mean(total_mAP):.4f}, Total_f1_score: {np.mean(total_f1):.4f}")
+                # 실제값 정리
+                for target in targets:
+                    targets_list.append({
+                        'boxes': target['boxes'].cpu().numpy().tolist(),
+                        'labels': target['labels'].cpu().numpy().tolist()
+                    })
+
+            # mAP 계산
+            map_score = calculate_map(predictions, targets_list, num_classes, iou_threshold=0.5)
+
+            print(f"mAP: {map_score}")
+            
+                
 
         # 모델 저장
-        if mAP > best_map_score:
-            best_map_score = mAP
+        if map_score > best_map_score:
+            best_map_score = map_score
             save_model(model, save_dir="./models", base_name="model", ext=".pth")
             print(f"Model saved with mAP score: {best_map_score:.4f}")
         
         # 학습률 스케줄러 업데이트
         if scheduler_name == "plateau":
-            scheduler.step(mAP)
+            scheduler.step(map_score) # ReduceLROnPlateau의 경우 mode='max'로 설정 (성능이 좋아지면 학습률 감소)
         else:
             scheduler.step()
 

@@ -80,3 +80,5 @@ def submission_csv(predictions, test_dir, submission_file_path=None, YOLO=True, 
             writer.writerows(submission_data)
 
     return submission_data
+
+# submission_csv(predictions, args.test_dir, args.submission_file_path, args.debug)

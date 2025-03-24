@@ -102,7 +102,7 @@ def get_category_mapping(ann_dir):
     이름 기준 정렬 후 인덱스를 재부여하는 함수입니다.
 
     Args:
-        ann_dir (str): 어노테이션 JSON 파일들이 저장된 디렉토리 경로
+        ann_dir (str): 어노테이션 JSON 파일들이 저장된 디렉토리 경로 ++ or txt 파일들이 저장된 디렉토리 경로
 
     Returns:
         name_to_idx (dict):  
@@ -127,12 +127,16 @@ def get_category_mapping(ann_dir):
         raise FileNotFoundError(f"ann_dir 경로가 존재하지 않습니다: {ann_dir}")
     
     id_to_name = {}
-    #  id -> name 매핑 수집
+    # 어노테이션 폴더 내 파일 순회
     for file in os.listdir(ann_dir):
-        with open(os.path.join(ann_dir, file), 'r', encoding='utf-8') as f:
-            ann = json.load(f)
-            for cat in ann['categories']:
-                id_to_name[cat['id']] = cat['name']
+        file_path = os.path.join(ann_dir, file)
+
+        if file.endswith(".json"):
+            # JSON 파일 처리
+            with open(file_path, 'r', encoding='utf-8') as f:
+                ann = json.load(f)
+                for cat in ann.get('categories', []):
+                    id_to_name[cat['id']] = cat['name']
 
     # 이름 기준 정렬
     sorted_names = sorted(set(id_to_name.values())) # 중복 제거 후 정렬
