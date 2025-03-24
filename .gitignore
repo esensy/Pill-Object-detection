@@ -26,8 +26,8 @@ data/train_labels/*
 # 혹시 남아있을 압축 파일 무시
 data/ai01-level1-project.zip
 
-# 데이터 폴더 전체 무시 (개별 예외만 따로 위에서 설정)
-data/*
+# 런 폴더 전체 무시 (개별 예외만 따로 위에서 설정)
+run/*
 
 # 가상환경 폴더 무시
 pj1/
