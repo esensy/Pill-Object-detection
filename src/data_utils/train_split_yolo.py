@@ -48,3 +48,6 @@ for img in val_images:
         shutil.move(os.path.join(label_dir, label), os.path.join(val_label_dir, label))
 
 print("✅ Train/Val 데이터셋 분할 및 이동 완료!")
+
+# 분할을 하는데 이미지는 놔두고, txt만 train.txt, val.txt파일 만들는 모듈? 함수?
+# 8:2로 이미지 패스들이 있어야하고, 어떤 정보들이 있어야하는지?

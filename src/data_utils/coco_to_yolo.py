@@ -9,6 +9,7 @@
 import json
 import os
 import argparse
+from src.data_utils.data_loader import get_category_mapping
 
 def convert_coco_to_yolo(json_file, output_dir):
     """
@@ -22,6 +23,8 @@ def convert_coco_to_yolo(json_file, output_dir):
         None
     """
     os.makedirs(output_dir, exist_ok=True)
+    ANN_DIR = "data/train_annots_modify"
+    name_to_idx, _ = get_category_mapping(ANN_DIR)
 
     with open(json_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -37,7 +40,11 @@ def convert_coco_to_yolo(json_file, output_dir):
                     x, y, w, h = ann["bbox"]
                     x_center, y_center = (x + w / 2) / img_w, (y + h / 2) / img_h
                     w, h = w / img_w, h / img_h
-                    f.write(f"{ann['category_id']} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
+
+                    for category in data['categories']:
+                        if ann["category_id"] == category["id"]:
+                            category_id = name_to_idx[category['name']]
+                            f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
 
 def process_all_json(json_folder, output_dir):
     """
@@ -69,12 +76,8 @@ def process_all_json(json_folder, output_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert COCO JSON annotations to YOLO format")
-    parser.add_argument("--json_folder", type=str, required=True, help="Folder containing COCO JSON files")
-    parser.add_argument("--output_dir", type=str, required=True, help="Output directory for YOLO label files")
+    parser.add_argument("--json_folder", type=str, default="data/train_annots_modify", required=True, help="Folder containing COCO JSON files")
+    parser.add_argument("--output_dir", type=str, default="data/train_labels_YOLO", required=True, help="Output directory for YOLO label files")
     args = parser.parse_args()
 
     process_all_json(args.json_folder, args.output_dir)
-<<<<<<< HEAD
-
-=======
->>>>>>> 37e535057aed02e0960770136c85a7dbb0d3e6ff

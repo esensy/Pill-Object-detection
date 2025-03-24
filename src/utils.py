@@ -106,7 +106,7 @@ def get_optimizer(name, model, lr=1e-3, weight_decay=0):
     return optimizers[name.lower()]
 
 # 스케줄러 생성 함수
-def get_scheduler(name, optimizer, step_size=10, gamma=0.1, T_max=50):
+def get_scheduler(name, optimizer, step_size=5, gamma=0.1, T_max=50):
     """
     주어진 이름(name)에 해당하는 스케줄러를 생성하여 반환합니다.
 
@@ -120,7 +120,7 @@ def get_scheduler(name, optimizer, step_size=10, gamma=0.1, T_max=50):
     schedulers = {
         "step": lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma),
         "cosine": lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max),
-        "plateau": lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=gamma, patience=step_size),
+        "plateau": lr_scheduler.ReduceLROnPlateau(optimizer, mode="max", factor=gamma, patience=step_size),
         "exponential": lr_scheduler.ExponentialLR(optimizer, gamma=gamma),
     }
 
@@ -158,56 +158,145 @@ def calculate_iou(box1, box2):
 
 # AP 계산 함수
 def calculate_ap(predictions, targets, iou_threshold=0.5):
-    # predictions: 예측된 값 [{'boxes': [...], 'labels': [...], 'score': [...]}]
-    # targets: 실제 값 [{'boxes': BoundingBoxes([...]), 'labels': tensor([...])}]
-    
     tp = []  # True Positive
     fp = []  # False Positive
     fn = []  # False Negative
-    
+    matched_targets = []  # 타겟 매칭 추적
+
     # 예측을 confidence에 따라 내림차순 정렬
     predictions = sorted(predictions, key=lambda x: max(x['scores']), reverse=True)
-    
-    # 클래스별로 처리
+
     for pred in predictions:
         pred_boxes = pred['boxes']
         pred_labels = pred['labels']
         
         for pred_bbox, pred_class_id in zip(pred_boxes, pred_labels):
             target_bboxes = [target['boxes'] for target in targets if pred_class_id in target['labels']]
-
-            # 클래스에 해당하는 target_bboxes가 없을 경우 건너뛰기
+            
             if not target_bboxes:
-                continue  
+                fp.append(1)
+                continue
             
-            # BoundingBoxes에서 좌표 추출
-            target_bboxes = target_bboxes[0].tolist()  # tensor를 리스트로 변환
-            
-            # IoU 계산하여 가장 높은 값 찾기
+            target_bboxes = [bbox for sublist in target_bboxes for bbox in sublist]
+
             ious = [calculate_iou(pred_bbox, target_bbox) for target_bbox in target_bboxes]
             
-            # IoU가 threshold 이상이면 True Positive
-            if any(iou >= iou_threshold for iou in ious):
-                tp.append(1)
-                fp.append(0)
-            else:
+            matched = False
+            for iou, target_bbox in zip(ious, target_bboxes):
+                if iou >= iou_threshold and target_bbox not in matched_targets:
+                    tp.append(1)
+                    fp.append(0)
+                    matched_targets.append(target_bbox)
+                    matched = True
+                    break
+            
+            if not matched:
                 tp.append(0)
                 fp.append(1)
     
-    # Precision과 Recall 계산
     tp = np.array(tp)
     fp = np.array(fp)
+
+    # 길이가 맞지 않다면, 길이가 맞게 패딩을 추가하거나 누락된 값을 채워주는 방법을 사용
+    if len(tp) != len(fp):
+        min_len = min(len(tp), len(fp))
+        tp = tp[:min_len]
+        fp = fp[:min_len]
     
     cumsum_tp = np.cumsum(tp)  # 누적 TP
     cumsum_fp = np.cumsum(fp)  # 누적 FP
-    
-    precision = cumsum_tp / (cumsum_tp + cumsum_fp)  # Precision
+
+    precision = np.divide(cumsum_tp, (cumsum_tp + cumsum_fp), where=(cumsum_tp + cumsum_fp) != 0)
     recall = cumsum_tp / len(targets)  # Recall
     
-    # AP 계산 (Precision-Recall Curve의 면적)
-    ap = np.trapz(precision, recall)  # 면적 계산 (곡선 아래 면적)
+    # AP 계산 시 Precision-Recall 배열 길이가 맞는지 확인
+    if len(precision) != len(recall):
+        min_len = min(len(precision), len(recall))
+        precision = precision[:min_len]
+        recall = recall[:min_len]
     
+    ap = np.trapz(precision, recall)  # 면적 계산
     return ap
+
+# def calculate_ap(predictions, targets, iou_threshold=0.5):
+#     # predictions: 예측된 값 [{'boxes': [...], 'labels': [...], 'score': [...]}]
+#     # targets: 실제 값 [{'boxes': BoundingBoxes([...]), 'labels': tensor([...])}]
+    
+#     tp = []  # True Positive
+#     fp = []  # False Positive
+#     fn = []  # False Negative
+    
+#     # 예측을 confidence에 따라 내림차순 정렬
+#     predictions = sorted(predictions, key=lambda x: max(x['scores']), reverse=True)
+    
+#     # 클래스별로 처리
+#     for pred in predictions:
+#         pred_boxes = pred['boxes']
+#         pred_labels = pred['labels']
+        
+#         matched_targets = []
+#         for pred_bbox, pred_class_id in zip(pred_boxes, pred_labels):
+#             target_bboxes = [target['boxes'] for target in targets if pred_class_id in target['labels']]
+            
+#             # 타겟 박스가 없으면 False Positive 처리
+#             if not target_bboxes:
+#                 fp.append(1)
+#                 continue
+
+#              # 2차원 리스트 → 1차원 리스트 변환
+#             target_bboxes = [bbox for sublist in target_bboxes for bbox in sublist]
+
+#             # IoU 계산하여 가장 높은 값 찾기
+#             ious = [calculate_iou(pred_bbox, target_bbox) for target_bbox in target_bboxes]
+            
+#             # # IoU가 threshold 이상이면 True Positive
+#             # if any(iou >= iou_threshold for iou in ious):
+#             #     tp.append(1)
+#             #     fp.append(0)
+#             # else:
+#             #     tp.append(0)
+#             #     fp.append(1)
+#             matched = False
+#             for iou, target_bbox in zip(ious, target_bboxes):
+#                 if iou >= iou_threshold and target_bbox not in matched_targets:
+#                     tp.append(1)
+#                     fp.append(0)
+#                     matched_targets.append(target_bbox)
+#                     matched = True
+#                     break
+            
+#             if not matched:
+#                 tp.append(0)
+#                 fp.append(1)
+
+    
+#     # Precision과 Recall 계산
+#     tp = np.array(tp)
+#     fp = np.array(fp)
+
+#     # 길이가 맞지 않다면, 길이가 맞게 패딩을 추가하거나 누락된 값을 채워주는 방법을 사용
+#     if len(tp) != len(fp):
+#         min_len = min(len(tp), len(fp))
+#         tp = tp[:min_len]
+#         fp = fp[:min_len]
+    
+#     cumsum_tp = np.cumsum(tp)  # 누적 TP
+#     cumsum_fp = np.cumsum(fp)  # 누적 FP
+    
+#     # precision = cumsum_tp / (cumsum_tp + cumsum_fp)  # Precision
+#     precision = np.divide(cumsum_tp, (cumsum_tp + cumsum_fp), where=(cumsum_tp + cumsum_fp) != 0)
+#     recall = cumsum_tp / len(targets)  # Recall
+
+#     # AP 계산 시 Precision-Recall 배열 길이가 맞는지 확인
+#     if len(precision) != len(recall):
+#         min_len = min(len(precision), len(recall))
+#         precision = precision[:min_len]
+#         recall = recall[:min_len]
+    
+#     # AP 계산 (Precision-Recall Curve의 면적)
+#     ap = np.trapz(precision, recall)  # 면적 계산 (곡선 아래 면적)
+    
+#     return ap
 
 # mAP 계산 함수
 def calculate_map(predictions, targets, num_classes, iou_threshold=0.5):
@@ -219,14 +308,14 @@ def calculate_map(predictions, targets, num_classes, iou_threshold=0.5):
         class_targets = [t for t in targets if class_id in t['labels']]
         
         # 해당 클래스에 대해 AP 계산
-        ap = calculate_ap(class_predictions, class_targets, iou_threshold)
+        precision, recall, ap = calculate_ap(class_predictions, class_targets, iou_threshold)
         ap_values.append(ap)
     
     # mAP는 모든 클래스의 AP의 평균
     map_score = np.mean(ap_values)
-    return map_score
+    return map_score, precision, recall
 
-# 시각화 함수수
+# 시각화 함수
 def draw_bbox(ax, box, text, color):
     """
     - ax: matplotlib Axes 객체
@@ -251,3 +340,79 @@ def draw_bbox(ax, box, text, color):
         weight="bold",
         fontsize=13,
     )
+
+# f1 스코어 계산 함수 
+def f1_score(precision, recall):
+    score = 2 * ((precision * recall)/ (precision + recall))
+
+    return score
+
+import numpy as np
+def visualization(results, page_size=20, page=0, debug=True):
+    total_num = len(results)
+    start_idx = page * page_size
+    end_idx = min(start_idx + page_size, total_num)
+
+    print(f"페이지 {page + 1} / {np.ceil(total_num / page_size).astype(int)} | {start_idx} - {end_idx}번째 이미지 표시")
+
+    num_images = min(total_num, 20)
+    row_img = max(num_images // 4, 1)
+    col_img = max(num_images // row_img, 1)
+    figsize = (5 * col_img, 5 * row_img)
+
+    print(f"페이지 당 {row_img} 행, {col_img} 열 형태의 이미지 플롯")
+
+    fig, ax = plt.subplots(row_img, col_img, figsize=figsize)
+
+    if row_img == 1 or col_img == 1:
+        ax = np.expand_dims(ax, axis=0)  
+        
+    for i in range(start_idx, end_idx):
+        file_name = results[i]['file_name']
+        image_id = results[i]['category_id']
+        boxes = results[i]['boxes']
+        bbox_num = len(boxes)
+        path = os.path.join('../data/test_images', file_name)
+        dr_name = [idx_to_name[id] for id in image_id]
+
+        if debug:
+            print(f"[{i + 1}] Visualize Image: {file_name}, DRUG ID: {image_id}, BBox Num: {bbox_num}")
+
+
+        if not os.path.exists(path):
+            print(f"[Error] 이미지 경로를 찾을 수 없습니다: {path}")
+            continue 
+
+        image = cv2.imread(path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        ax_idx = i - start_idx
+        ax_row = ax_idx // col_img
+        ax_col = ax_idx % col_img
+
+        ax[ax_row, ax_col].imshow(image)
+
+        for j in range(bbox_num):
+            ax[ax_row, ax_col].add_patch(
+                plt.Rectangle(
+                    (boxes[j][0], boxes[j][1]),
+                    boxes[j][2] - boxes[j][0],
+                    boxes[j][3] - boxes[j][1],
+                    fill=False,
+                    edgecolor='red',
+                    linewidth=2
+                )
+            )
+            ax[ax_row, ax_col].annotate(
+                text=dr_name[j],
+                xy=(boxes[j][0] - 10, boxes[j][1] - 10),
+                color="red",
+                weight="bold",
+                fontsize=8
+            )
+
+        ax[ax_row, ax_col].axis("off")
+        ax[ax_row, ax_col].set_title(f"{file_name}")
+
+    plt.tight_layout()
+    plt.show()
