@@ -20,8 +20,6 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from tqdm import tqdm
-from pycocotools.coco import COCO
-from pycocotools.cocoeval import COCOeval
 
 
 # 내부 모듈듈
@@ -80,7 +78,7 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
     best_map_score = 0
 
     best_map_score = 0
-    
+
     # 학습 루프
     for epoch in range(num_epochs):
         model.train()
@@ -96,6 +94,7 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
 
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
+
 
             losses.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -120,7 +119,6 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
             for images, targets in tqdm(val_loader, desc="Validation", dynamic_ncols=True):
                 # 이미지와 타겟을 GPU로 이동
                 images = [img.to(device) for img in images]
-                formatted_targets = format_bbox(targets, device)
 
                 predictions = model(images)
 
