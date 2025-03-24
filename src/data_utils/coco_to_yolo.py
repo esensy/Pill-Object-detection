@@ -43,7 +43,8 @@ def convert_coco_to_yolo(json_file, output_dir):
 
                     for category in data['categories']:
                         if ann["category_id"] == category["id"]:
-                            category_id = name_to_idx[category['name']]
+                            category_id = name_to_idx[category['name']] - 1
+                            ### 0-73 카테고리화를 위해 -1 진행
                             f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
 
 def process_all_json(json_folder, output_dir):

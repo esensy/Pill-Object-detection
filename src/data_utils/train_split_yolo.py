@@ -38,7 +38,7 @@ train_labels, val_labels = train_test_split(label_files, test_size=0.2, random_s
 open(train_txt_path, "w").close()
 open(val_txt_path, "w").close()
 
-# 복사 및 경로 저장
+# 복사 및 경로 저장a
 for label_file in train_labels:
     shutil.move(os.path.join(label_dir, label_file), os.path.join(train_label_dir, label_file))
     img_path = os.path.join(image_dir, label_file.replace(".txt", ".png"))

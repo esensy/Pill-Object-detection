@@ -114,9 +114,10 @@ def save_model(model, epoch, val_loss):
 if __name__ == "__main__":
     # train_YOLO(img_dir="data/train_images", ann_dir="data/train_labels", device="cuda" if torch.cuda.is_available() else "cpu")
     from ultralytics import YOLO
-    model = YOLO('yolov5s.pt')
+    # model = YOLO('yolov5s.pt')
+    model = YOLO('yolov8n.pt')
     model.train(
-        data='data.yaml',
+        data='C:/Users/nihao/Desktop/new_neo/new_neo_project1/data/data.yaml',
         epochs=5,
         imgsz=640,
         batch=8,
