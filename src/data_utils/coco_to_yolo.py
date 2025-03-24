@@ -74,4 +74,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     process_all_json(args.json_folder, args.output_dir)
+<<<<<<< HEAD
 
+=======
+>>>>>>> 37e535057aed02e0960770136c85a7dbb0d3e6ff

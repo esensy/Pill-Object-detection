@@ -10,6 +10,10 @@ __pycache__/
 # 모듈화 실행 시 덮어쓰기 방지를 위해 개개인의 검증용 어노테이션 디렉토리 제외
 data/train_annots_modify/*
 
+# 모듈화 실행시 해당 디랙토리 파일들을 덮어쓰기 떄문에 개개인의 모듈 실행확인을 위해
+# 해당 디랙토리를 제외시킴
+data/train_annots_modify/*
+
 # 이미지 디렉토리 무시 (필요 시 수동으로 제외 추천)
 data/test_images/*
 data/train_images/*
