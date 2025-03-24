@@ -130,7 +130,7 @@ torch.serialization.add_safe_globals([
 if __name__ == "__main__":
     # train_YOLO(img_dir="data/train_images", ann_dir="data/train_labels", device="cuda" if torch.cuda.is_available() else "cpu")
     from ultralytics import YOLO
-    model = YOLO('yolov5su.pt')
+    model = YOLO('yolov8n.pt')
     model.train(
         data='data.yaml',
         epochs=5,
