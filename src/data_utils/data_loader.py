@@ -524,6 +524,7 @@ def get_loader(img_dir, ann_dir=None, batch_size=8, mode="train", val_ratio=0.2,
         
         # 라벨 추출
         labels_for_stratify = []
+        # TODO : 분포확인
         for idx in range(len(base_dataset)):
             ann = base_dataset.get_ann_info(idx)
             if ann is not None and ann["annotations"]:
