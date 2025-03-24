@@ -215,12 +215,8 @@ def calculate_ap(predictions, targets, iou_threshold=0.5):
         precision = precision[:min_len]
         recall = recall[:min_len]
     
-<<<<<<< HEAD
-    return precision, recall, ap
-=======
     ap = np.trapz(precision, recall)  # 면적 계산
     return ap
->>>>>>> cbf11a520b85cc2eeb742020e69dfdbebcab1c6c
 
 # def calculate_ap(predictions, targets, iou_threshold=0.5):
 #     # predictions: 예측된 값 [{'boxes': [...], 'labels': [...], 'score': [...]}]
