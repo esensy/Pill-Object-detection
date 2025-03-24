@@ -1,50 +1,55 @@
 ################################################################################################
 # 데이터 다운 -> data loader 실행 -> json modify 실행 -> coco to yolo -> train split yolo 순서
-# 실행 코드
-# python coco_to_yolo.py --json_folder data/train_annots_modify --output_dir data/train_labels_YOLO
-# category_id x_center y_center width height + 좌표 정규화
-# 이렇게 바꿔놓아야 YOLO에서 돌아간다고 합니다
+# 실행 코드 python train_split_yolo.py
+# train_labels_YOLO → train/val 분할 및 train.txt, val.txt 생성
+# train, val.txt는 train과 val에 맞는 img 파일 path 정보가 들어있는 파일
 # ###############################################################################################
 
 import os
 import shutil
 from sklearn.model_selection import train_test_split
 
-# YOLO 데이터 경로 설정
-image_dir = "data/train_images"
+# 원본 라벨 경로
 label_dir = "data/train_labels_YOLO"
 
-train_image_dir = "data/train_images/train"
-val_image_dir = "data/train_images/val"
+# 이미지 파일이 있는 곳
+image_dir = "data/train_images"
 
-train_label_dir = "data/train_labels/train"
-val_label_dir = "data/train_labels/val"
+# 분할된 라벨 저장할 경로
+train_label_dir = "data/train_labels_YOLO/train"
+val_label_dir = "data/train_labels_YOLO/val"
+
+# train.txt / val.txt 저장 경로
+train_txt_path = "data/train.txt"
+val_txt_path = "data/val.txt"
 
 # 폴더 생성
-os.makedirs(train_image_dir, exist_ok=True)
-os.makedirs(val_image_dir, exist_ok=True)
 os.makedirs(train_label_dir, exist_ok=True)
 os.makedirs(val_label_dir, exist_ok=True)
 
-# 이미지 파일 리스트 가져오기
-image_files = [f for f in os.listdir(image_dir) if f.endswith('.png')]
-label_files = [f.replace('.png', '.txt') for f in image_files]  # YOLO 라벨 파일명
+# 원본 라벨 리스트 수집
+label_files = [f for f in os.listdir(label_dir) if f.endswith(".txt")]
+image_files = [f.replace(".txt", ".png") for f in label_files]
 
-# Train/Val 데이터 분할 (80:20)
-train_images, val_images = train_test_split(image_files, test_size=0.2, random_state=42)
+# 분할
+train_labels, val_labels = train_test_split(label_files, test_size=0.2, random_state=42)
 
-# Train 데이터 이동
-for img in train_images:
-    shutil.move(os.path.join(image_dir, img), os.path.join(train_image_dir, img))
-    label = img.replace(".png", ".txt")
-    if os.path.exists(os.path.join(label_dir, label)):
-        shutil.move(os.path.join(label_dir, label), os.path.join(train_label_dir, label))
+# .txt 파일 초기화
+open(train_txt_path, "w").close()
+open(val_txt_path, "w").close()
 
-# Val 데이터 이동
-for img in val_images:
-    shutil.move(os.path.join(image_dir, img), os.path.join(val_image_dir, img))
-    label = img.replace(".png", ".txt")
-    if os.path.exists(os.path.join(label_dir, label)):
-        shutil.move(os.path.join(label_dir, label), os.path.join(val_label_dir, label))
+# 복사 및 경로 저장
+for label_file in train_labels:
+    shutil.move(os.path.join(label_dir, label_file), os.path.join(train_label_dir, label_file))
+    img_path = os.path.join(image_dir, label_file.replace(".txt", ".png"))
+    with open(train_txt_path, "a") as f:
+        f.write(f"{img_path}\n")
 
-print("✅ Train/Val 데이터셋 분할 및 이동 완료!")
+for label_file in val_labels:
+    shutil.move(os.path.join(label_dir, label_file), os.path.join(val_label_dir, label_file))
+    img_path = os.path.join(image_dir, label_file.replace(".txt", ".png"))
+    with open(val_txt_path, "a") as f:
+        f.write(f"{img_path}\n")
+
+print("train_labels_YOLO → train_labels/train & val 분할 완료")
+print("train.txt / val.txt 파일 생성 완료")

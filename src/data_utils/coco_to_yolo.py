@@ -42,8 +42,9 @@ def convert_coco_to_yolo(json_file, output_dir):
                     w, h = w / img_w, h / img_h
 
                     for category in data['categories']:
-                        category_id = name_to_idx[category['name']]
-                        f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
+                        if ann["category_id"] == category["id"]:
+                            category_id = name_to_idx[category['name']]
+                            f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
 
 def process_all_json(json_folder, output_dir):
     """
@@ -54,13 +55,13 @@ def process_all_json(json_folder, output_dir):
         output_dir (str): YOLO 라벨을 저장할 폴더
     """
     if not os.path.exists(json_folder):
-        print(f"❌ JSON 폴더가 존재하지 않습니다: {json_folder}")
+        print(f"JSON 폴더가 존재하지 않습니다: {json_folder}")
         return
 
     json_files = [f for f in os.listdir(json_folder) if f.endswith('.json')]
 
     if len(json_files) == 0:
-        print("❌ 변환할 JSON 파일이 없습니다.")
+        print("변환할 JSON 파일이 없습니다.")
         return
 
     os.makedirs(output_dir, exist_ok=True)
@@ -71,12 +72,12 @@ def process_all_json(json_folder, output_dir):
         convert_coco_to_yolo(json_path, output_dir)
 
 
-    print("🎉 모든 JSON 파일 변환 완료!")
+    print("모든 JSON 파일 변환 완료")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert COCO JSON annotations to YOLO format")
-    parser.add_argument("--json_folder", type=str, default="data/train_annots_modify", required=True, help="Folder containing COCO JSON files")
-    parser.add_argument("--output_dir", type=str, default="data/train_labels_YOLO", required=True, help="Output directory for YOLO label files")
+    parser.add_argument("--json_folder", type=str, default="data/train_annots_modify", help="Folder containing COCO JSON files")
+    parser.add_argument("--output_dir", type=str, default="data/train_labels_YOLO", help="Output directory for YOLO label files")
     args = parser.parse_args()
 
     process_all_json(args.json_folder, args.output_dir)
