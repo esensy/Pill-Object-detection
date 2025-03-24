@@ -105,7 +105,7 @@ def create_txt_file(txt_name, image_folder='data/train_images', output_folder='d
 import yaml
 from src.data_utils.data_loader import get_category_mapping
 
-def make_yaml_file(YOLO_dataset_name='yolo_dataset_1', output_dir=os.path.join("data", "yaml_YOLO"), ):
+def make_yaml_file(YOLO_dataset_name='yolo_dataset_1', output_dir=os.path.join("data"), ):
     """
     YOLO 모델 학습을 위한 data.yaml 파일을 생성하는 함수.
     args:
@@ -119,13 +119,15 @@ def make_yaml_file(YOLO_dataset_name='yolo_dataset_1', output_dir=os.path.join("
     
 
     # 클래스와 클래스 수 설정
-    _, idx_to_name = get_category_mapping("data/train_annots_modify") ##??- 사용법 확인(-)
+    _, idx_to_name = get_category_mapping("data/train_annots_modify")  
     class_names = [name for name in idx_to_name.values()]
 
-    # train:과 val:이 같은 폴더를 가리키므로, YOLO가 _val.txt, _train.txt을 참조해 자동으로 이미지를 찾을 수 있습니다. 확인(-)
+    # train:과 val:이 같은 폴더를 가리키므로, YOLO가 _val.txt, _train.txt을 참조해 자동으로 이미지를 찾을 수 있습니다. 
     data = {
-        "train": f"data/train.txt",  
-        "val": f"data/val.txt", 
+        "train": f"train.txt",  
+        "val": f"val.txt", 
+        "train_labels":f"train_labels_YOLO/{YOLO_dataset_name}.txt",  
+        "val_labels":f"train_labels_YOLO/{YOLO_dataset_name}.txt",   
         "nc": len(class_names),
         "names": {i: name for i, name in enumerate(class_names)}
     }
