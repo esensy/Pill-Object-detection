@@ -1,7 +1,7 @@
 ################################################################################################
 # 데이터 다운 -> data loader 실행 -> json modify 실행 -> coco to yolo -> train split yolo 순서
 # 실행 코드
-# python coco_to_yolo.py --json_folder data/train_annots_modify --output_dir data/train_labels_YOLO
+# python coco_to_yolo.py --json_folder data/train_annots_modify --output_dir data/train_labels
 # category_id x_center y_center width height + 좌표 정규화
 # 이렇게 바꿔놓아야 YOLO에서 돌아간다고 합니다
 # ###############################################################################################
@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 
 # YOLO 데이터 경로 설정
 image_dir = "data/train_images"
-label_dir = "data/train_labels_YOLO"
+label_dir = "data/train_labels"
 
 train_image_dir = "data/train_images/train"
 val_image_dir = "data/train_images/val"
