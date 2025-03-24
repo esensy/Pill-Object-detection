@@ -20,8 +20,6 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from tqdm import tqdm
-from pycocotools.coco import COCO
-from pycocotools.cocoeval import COCOeval
 
 
 # 내부 모듈듈
