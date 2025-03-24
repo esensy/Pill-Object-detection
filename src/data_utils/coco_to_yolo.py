@@ -1,7 +1,7 @@
 ################################################################################################
 # 데이터 다운 -> data loader 실행 -> json modify 실행 -> coco to yolo 순서
 # 실행 코드
-# python coco_to_yolo.py --json_folder data/train_annots_modify --output_dir data/train_labels
+# python coco_to.py --json_folder data/train_annots_modify --output_dir data/train_labels
 # category_id x_center y_center width height + 좌표 정규화
 # 이렇게 바꿔놓아야 YOLO에서 돌아간다고 합니다
 # ###############################################################################################
@@ -11,7 +11,7 @@ import os
 import argparse
 from src.data_utils.data_loader import get_category_mapping
 
-def convert_coco_to_yolo(json_file, output_dir):
+def convert_coco_to(json_file, output_dir):
     """
     COCO JSON 형식의 어노테이션 데이터를 YOLO 형식으로 변환하는 함수.
 
@@ -69,7 +69,7 @@ def process_all_json(json_folder, output_dir):
     # 변환 진행
     for i, json_file in enumerate(json_files, start=1):
         json_path = os.path.join(json_folder, json_file)
-        convert_coco_to_yolo(json_path, output_dir)
+        convert_coco_to(json_path, output_dir)
 
 
     print("모든 JSON 파일 변환 완료")
@@ -77,10 +77,13 @@ def process_all_json(json_folder, output_dir):
 
 
 ################ YOLO 모델 학습을 위한 data.yaml 파일을 생성하는 함수. ################
+# TODO: startify 를 이용해서 train, val 나누기
+# TODO: yaml 파일에 노클래스랑, 백그라운드 없애야합니다.
+
 # txt 파일생성  (이미지 경로랑 어떤이미지인지 파일이름들이 들어가있음)
 from sklearn.model_selection import train_test_split
 import os
-def create_txt_file(txt_name, image_folder='data/train_images', output_folder='data/val_labels_YOLO', val_ratio=0.2, seed=42):
+def create_txt_file(txt_name, image_folder='data/train_images', output_folder='data/val_labels', val_ratio=0.2, seed=42):
 
     # 이미지 파일 목록 가져오기
     image_files = [f for f in os.listdir(image_folder) if f.lower().endswith(('.png'))]
@@ -92,12 +95,12 @@ def create_txt_file(txt_name, image_folder='data/train_images', output_folder='d
     os.makedirs(output_folder, exist_ok=True)
 
     # 학습 데이터셋 파일 경로 저장
-    with open(f"data/val_labels_YOLO/{txt_name}.txt", "w") as f:
+    with open(f"data/val_labels/{txt_name}.txt", "w") as f:
         for file in train_files:
             f.write(file + '\n')
 
     # 검증 데이터셋 파일 경로 저장
-    with open(f"data/val_labels_YOLO/{txt_name}.txt", "w") as f:
+    with open(f"data/val_labels/{txt_name}.txt", "w") as f:
         for file in val_files:
             f.write(file + '\n')
 
@@ -127,8 +130,8 @@ def make_yaml_file(YOLO_dataset_name='yolo_dataset_1', output_dir=os.path.join("
     data = {
         "train": f"train.txt",  
         "val": f"val.txt", 
-        "train_labels":f"train_labels_YOLO/{YOLO_dataset_name}.txt",  
-        "val_labels":f"train_labels_YOLO/{YOLO_dataset_name}.txt",   
+        "train_labels":f"train_labels/{YOLO_dataset_name}.txt",  
+        "val_labels":f"train_labels/{YOLO_dataset_name}.txt",   
         "nc": len(class_names),
         "names": {i: name for i, name in enumerate(class_names)}
     }
@@ -141,7 +144,7 @@ def make_yaml_file(YOLO_dataset_name='yolo_dataset_1', output_dir=os.path.join("
     except Exception as e:
         print(f"YAML 파일 생성 중 오류가 발생했습니다: {e}")
 
-    print(f"✅ {yaml_file_dir} 파일이 생성되었습니다.")
+    print(f"{yaml_file_dir} 파일이 생성되었습니다.")
 
 ###########################################################################################
 
