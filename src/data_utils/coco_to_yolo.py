@@ -1,7 +1,7 @@
 ################################################################################################
 # 데이터 다운 -> data loader 실행 -> json modify 실행 -> coco to yolo 순서
 # 실행 코드
-# python coco_to_yolo.py --json_folder data/train_annots_modify --output_dir data/train_labels
+# python coco_to.py --json_folder data/train_annots_modify --output_dir data/train_labels
 # category_id x_center y_center width height + 좌표 정규화
 # 이렇게 바꿔놓아야 YOLO에서 돌아간다고 합니다
 # ###############################################################################################
@@ -11,7 +11,7 @@ import os
 import argparse
 from src.data_utils.data_loader import get_category_mapping
 
-def convert_coco_to_yolo(json_file, output_dir):
+def convert_coco_to(json_file, output_dir):
     """
     COCO JSON 형식의 어노테이션 데이터를 YOLO 형식으로 변환하는 함수.
 
@@ -70,10 +70,13 @@ def process_all_json(json_folder, output_dir):
     # 변환 진행
     for i, json_file in enumerate(json_files, start=1):
         json_path = os.path.join(json_folder, json_file)
-        convert_coco_to_yolo(json_path, output_dir)
+        convert_coco_to(json_path, output_dir)
 
 
     print("모든 JSON 파일 변환 완료")
+
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert COCO JSON annotations to YOLO format")

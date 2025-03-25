@@ -524,10 +524,11 @@ def get_loader(img_dir, ann_dir=None, batch_size=8, mode="train", val_ratio=0.2,
         
         # 라벨 추출
         labels_for_stratify = []
+        # 마지막 카테고리 아이디를 기준으로 분포를 측정(왜곡이 될 수 있지만 감당 가능함)
         for idx in range(len(base_dataset)):
             ann = base_dataset.get_ann_info(idx)
             if ann is not None and ann["annotations"]:
-                rep_label = ann["annotations"][0]["category_id"]
+                rep_label = ann["annotations"][-1]["category_id"]
             else:
                 rep_label = 0
             labels_for_stratify.append(rep_label)
@@ -539,6 +540,13 @@ def get_loader(img_dir, ann_dir=None, batch_size=8, mode="train", val_ratio=0.2,
         # Stratify 후 디버깅 출력
         if debug:
             print(f"[DEBUG] Stratify 분리 완료: Train {len(train_idx)}개 / Val {len(val_idx)}개")
+
+            from collections import Counter
+            label_counts = Counter(labels_for_stratify)
+            print(f"[DEBUG] Stratify용 레이블 전체 분포 (총 {len(label_counts)}개):")
+            print("[DEBUG] 현재 카테고리 아이디 변환 이전")
+            for cat_id, count in sorted(label_counts.items(), key=lambda x: x[1], reverse=True):
+                print(f"  - Category ID {cat_id}: {count}개")
 
         
         # Custom subset 클래스
@@ -657,7 +665,7 @@ if __name__ == "__main__":
         raise ValueError("잘못된 mode 값입니다. 'train', 'val', 'test' 중 하나를 입력하세요.")
 
     # 공통 출력
-    print("========== [로더 생성 완료] ==========")
+    print("\n========== [로더 생성 완료] ==========")
     print(f"모드: {args.mode} | 배치 사이즈: {args.batch_size} | val_ratio: {args.val_ratio}")
     if args.debug:
         print("⚠ 디버깅 모드 활성화: 데이터 통계 및 배치 정보 출력")

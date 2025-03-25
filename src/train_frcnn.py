@@ -65,8 +65,7 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
     name_to_idx, idx_to_name = get_category_mapping(json_dir)
     num_classes = len(name_to_idx)
 
-    train_loader = get_loader(img_dir, json_dir, batch_size, mode="train", val_ratio=0.2, bbox_format="XYXY", debug=debug)
-    val_loader = get_loader(img_dir, json_dir, batch_size, mode="val", val_ratio=0.2, bbox_format="XYXY", debug=debug)
+    train_loader, val_loader = get_loader(img_dir, json_dir, batch_size, mode="train", val_ratio=0.2, bbox_format="XYXY", debug=debug)
 
     # 모델 및 학습 설정
     model = get_fast_rcnn_model(num_classes).to(device)
@@ -137,10 +136,9 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
                     })
 
             # mAP 계산
-            map_score = calculate_map(predictions, targets_list, num_classes, iou_threshold=0.5)
+            map_score, precision, recall = calculate_map(predictions, targets_list, num_classes, iou_threshold=0.5)
 
-            print(f"mAP: {map_score}")
-            
+            print(f"mAP: {map_score}, Precision: {precision}, Recall: {recall}")
                 
 
         # 모델 저장
