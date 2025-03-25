@@ -80,31 +80,26 @@ def calculate_iou(box1, box2):
     iou = inter_area / (area1 + area2 - inter_area)
     return iou
 
-# AP 계산 함수
 def calculate_ap(predictions, targets, iou_threshold=0.5):
-    tp = []  # True Positive
-    fp = []  # False Positive
-    fn = []  # False Negative
-    matched_targets = []  # 타겟 매칭 추적
+    tp, fp, fn = [], [], []
+    matched_targets = []
 
-    # 예측을 confidence에 따라 내림차순 정렬
+    # 예측을 confidence 순으로 정렬
     predictions = sorted(predictions, key=lambda x: max(x['scores']), reverse=True)
 
     for pred in predictions:
         pred_boxes = pred['boxes']
         pred_labels = pred['labels']
-        
+
         for pred_bbox, pred_class_id in zip(pred_boxes, pred_labels):
             target_bboxes = [target['boxes'] for target in targets if pred_class_id in target['labels']]
-            
             if not target_bboxes:
                 fp.append(1)
                 continue
-            
-            target_bboxes = [bbox for sublist in target_bboxes for bbox in sublist]
 
+            target_bboxes = [bbox for sublist in target_bboxes for bbox in sublist]
             ious = [calculate_iou(pred_bbox, target_bbox) for target_bbox in target_bboxes]
-            
+
             matched = False
             for iou, target_bbox in zip(ious, target_bboxes):
                 if iou >= iou_threshold and target_bbox not in matched_targets:
@@ -113,51 +108,66 @@ def calculate_ap(predictions, targets, iou_threshold=0.5):
                     matched_targets.append(target_bbox)
                     matched = True
                     break
-            
+
             if not matched:
                 tp.append(0)
                 fp.append(1)
-    
-    tp = np.array(tp)
-    fp = np.array(fp)
 
-    # 길이가 맞지 않다면, 길이가 맞게 패딩을 추가하거나 누락된 값을 채워주는 방법을 사용
+    tp, fp = np.array(tp), np.array(fp)
+
     if len(tp) != len(fp):
         min_len = min(len(tp), len(fp))
-        tp = tp[:min_len]
-        fp = fp[:min_len]
-    
-    cumsum_tp = np.cumsum(tp)  # 누적 TP
-    cumsum_fp = np.cumsum(fp)  # 누적 FP
+        tp, fp = tp[:min_len], fp[:min_len]
+
+    cumsum_tp = np.cumsum(tp)
+    cumsum_fp = np.cumsum(fp)
 
     precision = np.divide(cumsum_tp, (cumsum_tp + cumsum_fp), where=(cumsum_tp + cumsum_fp) != 0)
-    recall = cumsum_tp / len(targets)  # Recall
     
-    # AP 계산 시 Precision-Recall 배열 길이가 맞는지 확인
-    if len(precision) != len(recall):
-        min_len = min(len(precision), len(recall))
-        precision = precision[:min_len]
-        recall = recall[:min_len]
-    
-    ap = np.trapz(precision, recall)  # 면적 계산
-    return ap, precision, recall
+    recall = np.zeros_like(cumsum_tp) if len(targets) == 0 else cumsum_tp / len(targets)
 
-# mAP 계산 함수
+    # Recall 기준으로 정렬
+    sorted_indices = np.argsort(recall)
+    recall = recall[sorted_indices]
+    precision = precision[sorted_indices]
+
+    # Precision을 non-decreasing하게 보정
+    for i in range(len(precision) - 1, 0, -1):
+        precision[i - 1] = max(precision[i - 1], precision[i])
+
+    # AP 계산 (보정 후 적분)
+    ap = np.trapz(precision, recall)
+
+    return ap, precision, recall  # AP 보정
+
 def calculate_map(predictions, targets, num_classes, iou_threshold=0.5):
-    ap_values = []
-    
-    for class_id in range(1, num_classes+1):  # 클래스 ID는 1부터 시작한다고 가정
-        # 예측값과 실제값을 클래스별로 필터링
+    ap_values, precisions, recalls = [], [], []
+
+    for class_id in range(1, num_classes + 1):
         class_predictions = [p for p in predictions if class_id in p['labels']]
         class_targets = [t for t in targets if class_id in t['labels']]
-        
-        # 해당 클래스에 대해 AP 계산
-        precision, recall, ap = calculate_ap(class_predictions, class_targets, iou_threshold)
+
+        ap, precision, recall = calculate_ap(class_predictions, class_targets, iou_threshold)
         ap_values.append(ap)
-    
-    # mAP는 모든 클래스의 AP의 평균
+        precisions.append(precision)
+        recalls.append(recall)
+
+    # AP 보정: 1을 초과하지 않도록
+    ap_values = [min(ap, 1.0) for ap in ap_values]
+
+    # 전체 바운딩 박스 개수 계산
+    num_gt_boxes = sum(len(target['boxes']) for target in targets)
+
+    # Recall과 Precision 값 수정
     map_score = np.mean(ap_values)
-    return map_score, precision, recall
+    mean_precision = np.mean([np.mean(p) if len(p) > 0 else 0 for p in precisions]) if len(precisions) > 0 else 0
+    mean_recall = np.mean([np.mean(r) if len(r) > 0 else 0 for r in recalls]) if num_gt_boxes > 0 else 0
+
+    # map_score = np.mean(ap_values)
+    # mean_precision = np.mean([np.mean(p) for p in precisions if len(p) > 0]) if len(precisions) > 0 else 0
+    # mean_recall = np.mean([np.mean(r) for r in recalls if len(r) > 0]) if len(recalls) > 0 else 0
+
+    return map_score, mean_precision, mean_recall
 
 # 시각화 함수
 def draw_bbox(ax, box, text, color):
@@ -302,3 +312,6 @@ else:
 # ▶ Warnings 제거
 warnings.filterwarnings('ignore')
 # ====================================================================================
+
+
+

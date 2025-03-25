@@ -16,19 +16,25 @@
 """
 # 외부 모듈듈
 import numpy as np
-import torch
-import torch.optim as optim
-import torch.nn as nn
 from tqdm import tqdm
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
+import torchvision.utils as vutils
 
 # 내부 모듈듈
 from src.utils import get_optimizer
 from src.utils import get_scheduler
-from src.utils import calculate_map, f1_score
+from src.utils import calculate_map
 from src.data_utils.data_loader import get_loader
 from src.data_utils.data_loader import get_category_mapping
-from src.model_utils.basic_frcnn import save_model
+from src.model_utils.basic_frcnn import get_new_session_folder, save_model
 from src.model_utils.basic_frcnn import get_fast_rcnn_model
+
+# 텐서보드 객체 생성
+writer = SummaryWriter("tensorboard_log_dir")
+
 
 def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5, optimizer_name: str = "sgd", 
           scheduler_name: str = "plateau", lr: float = 0.001, weight_decay: float = 0.0005, 
@@ -63,7 +69,6 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
 
     # 데이터 로드 및 클래스 매핑
     name_to_idx, idx_to_name = get_category_mapping(json_dir)
-    print(name_to_idx)
     num_classes = len(name_to_idx)
     train_loader, val_loader = get_loader(img_dir, json_dir, batch_size, mode="train", val_ratio=0.2, bbox_format="XYXY", debug=debug)
 
@@ -72,7 +77,10 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
     optimizer = get_optimizer(optimizer_name, model, lr, weight_decay)
     scheduler = get_scheduler(scheduler_name, optimizer, step_size=5, gamma=0.1, T_max=100) # T_max는 CosineAnnealingLR에서만 사용
 
-    # 검증 데이터셋 평가
+    # 새로운 세션 폴더 생성
+    session_folder = get_new_session_folder(save_dir="./models", session_prefix="frcnn_session_")
+
+    # 최고 성능 모델 저장을 위한 변수
     best_map_score = 0
     
     # 학습 루프
@@ -105,6 +113,12 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
 
             avg_loss_details = ", ".join([f"{k}: {v / len(train_loader):.4f}" for k, v in epoch_loss_details.items()])
             progress_bar.set_postfix(Avg_Loss=avg_loss_details)
+        
+        # 텐서보드 기록 추가
+        writer.add_scalar("Loss/Total", total_loss, epoch)
+        for k, v in epoch_loss_details.items():
+            writer.add_scalar(f"Loss/{k}", v / len(train_loader), epoch)
+
 
         print(f"Epoch {epoch+1} Complete - Total Loss: {total_loss:.4f}, Avg Loss Per Component: {avg_loss_details}")
 
@@ -137,14 +151,23 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
             # mAP 계산
             map_score, precision, recall = calculate_map(predictions, targets_list, num_classes, iou_threshold=0.5)
 
+            # 텐서보드에 기록
+            writer.add_scalar("mAP", map_score, epoch)
+            writer.add_scalar("Precision", precision, epoch)
+            writer.add_scalar("Recall", recall, epoch)
+
             print(f"mAP: {map_score}, Precision: {precision}, Recall: {recall}")
                 
 
         # 모델 저장
         if map_score > best_map_score:
             best_map_score = map_score
-            save_model(model, save_dir="./models", base_name="model", ext=".pth")
+            save_model(model, session_folder)
             print(f"Model saved with mAP score: {best_map_score:.4f}")
+
+        # 텐서보드 학습률 기록
+        current_lr = optimizer.param_groups[0]['lr']
+        writer.add_scalar("Learning Rate", current_lr, epoch)
         
         # 학습률 스케줄러 업데이트
         if scheduler_name == "plateau":
@@ -152,4 +175,6 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
         else:
             scheduler.step()
 
+    # 텐서보드 종료        
+    writer.close()
     print(f"Training complete. Best mAP: {best_map_score:.4f}")
