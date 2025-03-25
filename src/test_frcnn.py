@@ -45,7 +45,7 @@ def test(img_dir, device='cpu', model_path=None, batch_size=8, threshold=0.5, de
     num_classes = len(name_to_idx)
 
     # 모델 가져오기
-    model = get_fast_rcnn_model(num_classes=num_classes + 1)
+    model = get_fast_rcnn_model(num_classes=num_classes)
 
     # 모델 패스 가져오기
     if model_path:
@@ -93,7 +93,7 @@ def test(img_dir, device='cpu', model_path=None, batch_size=8, threshold=0.5, de
                     }
                 )
     
-    return results, idx_to_name
+    return results
 
 
 #############################################################################################

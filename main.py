@@ -12,12 +12,14 @@ python main.py --mode train --batch_size 5 --epochs 30 --optimizer sgd --schedul
 python main.py --mode test --img_dir "data/test_images"  --> 기본 실행
 python main.py --mode test --img_dir "data/test_images" --debug --visualization --> 디버그 + 시각화 추가
 python main.py --mode test --img_dir "data/test_images" --test_batch_size 4 --threshold 0.5 --debug --visualization --> 배치 조정, 임계값 조정
-
+python main.py --mode test --img_dir "data/test_images" --test_batch_size 4 --threshold 0.5 --debug --visualization --page_size --page_lim --> 시각화 조정
 - model_path: weight & bias 정보가 담긴 .pth 파일이 존재할 경우 경로 지정.
 - test_batch_size: (default) 4
 - threshold: (default) 0.5
 - debug: 입력시 True, 아니면 False
 - visualization: 입력시 True, 아니면 False
+- page_size: 저장될 이미지 하나에 포함될 이미지의 개수 (default) 4
+- page_lim:  샘플링 여부 (default) None --> int 입력값 수정으로 샘플링의 양을 설정
 """
 
 
@@ -42,7 +44,11 @@ def main():
     parser.add_argument("--model_path", type=str, required=False, help="테스트할 모델 경로")
     parser.add_argument("--test_batch_size", type=int, default=4, help="테스트 배치 사이즈")
     parser.add_argument("--threshold", type=float, default=0.5, help="예측 임계값")
+
+    # 시각화
     parser.add_argument("--visualization", action="store_true", help="시각화 여부")
+    parser.add_argument("--page_size", type=int, default=20, help="한 페이지에 저장될 이미지의 수")
+    parser.add_argument("--page_lim", type=int, default=None, help="저장할 페이지의 제한")
 
     args = parser.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -62,7 +68,7 @@ def main():
         )
 
     elif args.mode == "test":
-        results, idx_to_name = test(
+        results = test(
             img_dir=args.img_dir,
             device=device,
             model_path=args.model_path,
@@ -72,7 +78,10 @@ def main():
         )
 
         if args.visualization:
-            visualization(results, idx_to_name, page_size=20, debug=args.debug)
+            visualization(results, 
+                          page_size=args.page_size, 
+                          page_lim=args.page_lim, 
+                          debug=args.debug)
 
 if __name__ == "__main__":
     main()
