@@ -201,7 +201,7 @@ def make_yaml(train_dir, val_dir, output_dir):
 
     try:
         with open(yaml_dir, "w", encoding='utf-8') as f:
-            yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            yaml.dump(data, f, default_flow_style=True, allow_unicode=True, sort_keys=False)
         print(f"YAML 파일이 '{yaml_dir}'에 성공적으로 생성되었습니다.")
     except Exception as e:
         print(f"YAML 파일 생성 중 오류가 발생했습니다: {e}")
@@ -216,16 +216,16 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, default="data/train_labels", help="Output directory for YOLO label files")
     args = parser.parse_args()
 
-    process_all_json(args.json_folder, args.output_dir)
+    #process_all_json(args.json_folder, args.output_dir)
 
     
-    label_dir = r"C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\train_labels"
-    image_dir = r"C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\train_images"
-    output_train = r"C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\train_labels\train"
-    output_val = r"C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\train_labels\val"
-    split_labels_and_images(label_dir, image_dir, output_train, output_val, test_size=0.2, random_state=42)
+    label_dir = r"C:\Users\nihao\Desktop\new_neo\new_neo_project1\data\train_labels"
+    image_dir = r"C:\Users\nihao\Desktop\new_neo\new_neo_project1\data\train_images"
+    output_train = r"C:\Users\nihao\Desktop\new_neo\new_neo_project1\data\train_labels\train"
+    output_val = r"C:\Users\nihao\Desktop\new_neo\new_neo_project1\data\train_labels\val"
+    #split_labels_and_images(label_dir, image_dir, output_train, output_val, test_size=0.2, random_state=42)
 
-    train_dir = r"C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\train_labels\train"
-    val_dir = r"C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\train_labels\val"
-    output_dir = r"C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\train_labels"
+    train_dir = r"C:\Users\nihao\Desktop\new_neo\new_neo_project1\data\train_labels\train"
+    val_dir = r"C:\Users\nihao\Desktop\new_neo\new_neo_project1\data\train_labels\val"
+    output_dir = r"C:\Users\nihao\Desktop\new_neo\new_neo_project1\data\train_labels"
     make_yaml(train_dir, val_dir, output_dir)
