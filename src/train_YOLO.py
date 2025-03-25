@@ -118,7 +118,7 @@ from ultralytics.nn.modules.block import Bottleneck, C3, SPPF
 from torch.nn import Sequential
 ## 폰트 오류로 밑에 두 줄 추가
 import matplotlib.pyplot as plt
-plt.rcParams['font.family'] = 'malgun gothic'
+
 
 # PyTorch 2.6 이후는 반드시 안전 글로벌 등록!
 torch.serialization.add_safe_globals([
