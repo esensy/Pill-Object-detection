@@ -125,7 +125,7 @@ from tqdm import tqdm
 import argparse
 from ultralytics import YOLO
 import matplotlib.pyplot as plt
-plt.rcParams['font.family'] = 'malgun gothic'
+
 
 def train_YOLO(img_dir: str,
                ann_dir: str,

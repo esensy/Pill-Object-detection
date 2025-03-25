@@ -6,7 +6,12 @@ from src.utils import visualization
 
 """
 학습 실행
-python main.py --mode train --batch_size 5 --epochs 30 --optimizer sgd --scheduler plateau --lr 0.001 --weight_decay 0.0005
+1번 실험 mAP = 0.9080
+python main.py --mode train --batch_size 4 --epochs 30 --optimizer sgd --scheduler plateau --lr 0.001 --weight_decay 0.0005
+
+2번 실험
+python main.py --mode train --batch_size 4 --epochs 15 --optimizer adamw --scheduler cosine --lr 0.0001 --weight_decay 0.0001
+
 
 예측 실행
 python main.py --mode test --img_dir "data/test_images"  --> 기본 실행
@@ -18,7 +23,7 @@ python main.py --mode test --img_dir "data/test_images" --test_batch_size 4 --th
 - threshold: (default) 0.5
 - debug: 입력시 True, 아니면 False
 - visualization: 입력시 True, 아니면 False
-- page_size: 저장될 이미지 하나에 포함될 이미지의 개수 (default) 4
+- page_size: 저장될 이미지 하나에 포함될 이미지의 개수 (default) 20
 - page_lim:  샘플링 여부 (default) None --> int 입력값 수정으로 샘플링의 양을 설정
 """
 
