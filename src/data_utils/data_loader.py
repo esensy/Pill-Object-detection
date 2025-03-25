@@ -235,7 +235,7 @@ class PillDataset(Dataset):
             if debug:
                 print(f"\n[DEBUG] 총 {len(common_name)}개의 이미지-어노테이션 파일 처리")
                 if missing_img:
-                    print(f"[WARNING] 어노테이션은 있지만 이미지가 없는 파일 목록(총 {len(missing_img)}개개):")
+                    print(f"[WARNING] 어노테이션은 있지만 이미지가 없는 파일 목록(총 {len(missing_img)}개):")
                     for name in sorted(missing_img):
                         print(f" - {name}")
                 if missing_ann:
