@@ -27,7 +27,7 @@ data/train_labels/*
 data/ai01-level1-project.zip
 
 # 런 폴더 전체 무시 (개별 예외만 따로 위에서 설정)
-run/*
+runs/*
 
 # 가상환경 폴더 무시
 pj1/

@@ -44,7 +44,7 @@ def convert_json_to_txt(json_file, output_dir):
 
                     for category in data['categories']:
                         if ann["category_id"] == category["id"]:
-                            # 0:배경인데 배경을 없애기 위해서 -1함
+                            # 0:배경을 제거하기 위해서 -1
                             category_id = name_to_idx[category['name']] - 1
                             f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
 
@@ -79,6 +79,8 @@ def process_all_json(json_folder, output_dir):
 
 
     print("모든 JSON 파일 변환 완료")
+
+
 
 
 
