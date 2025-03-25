@@ -177,12 +177,17 @@ def draw_bbox(ax, box, text, color):
             linewidth=2,
         )
     )
+    # 텍스트 위치가 이미지 밖으로 나가지 않도록 보정
+    text_x = max(box[0], 5)
+    text_y = max(box[1] - 10, 5)
+
     ax.annotate(
         text=text,
-        xy=(box[0] - 5, box[1] - 5),
-        color=color,
+        xy=(text_x, text_y),
+        color='blue',
         weight="bold",
-        fontsize=13,
+        fontsize=8,
+        bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
     )
 
 # f1 스코어 계산 함수 
@@ -192,18 +197,23 @@ def f1_score(precision, recall):
     return score
 
 
-def visualization(results, idx_to_name, page_size=20, debug=True):
+def visualization(results:list, page_size:int=20, page_lim:int=None, debug:bool=True):
     """
     모델 예측값 시각화
     산발적인 출력 대신, data/results/frcnn폴더에 산출된 결과를 토대로 그려진 이미지 페이지를 저장.
     - results: test 모듈에서 반환환된 예측 결과 list
-    - idx_to_name: index와 약재의 이름이 매핑된 결과
+    - idx_to_name: index와 약재의 이름이 매핑된 결과 dict
     - page_size: 한 페이지에 들어갈 이미지의 수
-    - page: 페이지 인덱싱 (예: page=1, page_size=20의 경우 20~39까지의 이미지를 한페이지에 저장 및 출력 (0~19의 이미지는 0페이지))
+    - page_lim: 페이지 제한 (예: total_page = 40 일 경우, 모든 페이지를 받는 대신, 제한을 둬서 페이지를 샘플링)
     - debug: 디버그 여부.
     """
     total_num = len(results)
     total_pages = np.ceil(total_num / page_size).astype(int)
+
+    if page_lim is not None:
+        if page_lim <= 0:
+            raise ValueError("page_lim은 양의 정수여야 합니다.")
+        total_pages = min(total_pages, page_lim)
 
     print(f"전체 {total_num}개의 이미지, {total_pages} 페이지로 분할 저장합니다.")
 
@@ -219,7 +229,6 @@ def visualization(results, idx_to_name, page_size=20, debug=True):
         num_images = end_idx - start_idx
         col_img = min(4, num_images)
         row_img = (num_images + col_img - 1) // col_img if num_images > 0 else 1
-        
         figsize = (5 * col_img, 5 * row_img)
 
         print(f"페이지 당 {row_img} 행, {col_img} 열 형태의 이미지 플롯")
@@ -233,15 +242,17 @@ def visualization(results, idx_to_name, page_size=20, debug=True):
 
         for i in range(start_idx, end_idx):
             file_name = results[i]['file_name']
-            image_id = results[i]['category_id']
+            drug_id = results[i]['category_id']
+            drug_names = results[i]['category_name']
             boxes = results[i]['boxes']
+            scores = results[i]['scores']
             bbox_num = len(boxes)
             path = os.path.join('./data/test_images', file_name)
-            dr_name = [idx_to_name[id] for id in image_id]
 
             if debug:
-                print(f"[{i + 1}] Visualize Image: {file_name}, DRUG ID: {image_id}, BBox Num: {bbox_num}")
-
+                print(f"[{i + 1}] Visualize Image: {file_name}, DRUG ID: {drug_id}, BBox Num: {bbox_num}")
+                print(f"Scores: {scores}")
+                print(f"Drug Names: {drug_names}")
 
             if not os.path.exists(path):
                 print(f"[Error] 이미지 경로를 찾을 수 없습니다: {path}")
@@ -255,9 +266,9 @@ def visualization(results, idx_to_name, page_size=20, debug=True):
             ax_col = ax_idx % col_img
 
             ax[ax_row, ax_col].imshow(image)
-
-            for j in range(bbox_num):
-                draw_bbox(ax[ax_row, ax_col], boxes[j], dr_name[j], color='red')
+            assert len(boxes) == len(scores), "Bounding Box와 점수의 개수가 맞지 않습니다."
+            for name, box, score in zip(drug_names, boxes, scores):
+                draw_bbox(ax[ax_row, ax_col], box, f'{name}: {score:.2f}', color='red')
 
             ax[ax_row, ax_col].axis("off")
             ax[ax_row, ax_col].set_title(f"{file_name}")
