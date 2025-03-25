@@ -131,10 +131,11 @@ def predict_yolo_and_export_csv(model_path, image_dir, conf_threshold=0.5, iou_t
                 "annotation_id": annotation_id,
                 "image_id": image_id,
                 "category_id": cls,
-                "bbox_x": box[0],
-                "bbox_y": box[1],
-                "bbox_w": box[2],
-                "bbox_h": box[3],
+                # float -> 반올림 이후 int
+                "bbox_x": int(round(box[0])),
+                "bbox_y": int(round(box[1])),
+                "bbox_w": int(round(box[2])),
+                "bbox_h": int(round(box[3])),
                 "score": score
             })
             annotation_id += 1
