@@ -18,7 +18,7 @@ python main.py --mode test --img_dir "data/test_images" --test_batch_size 4 --th
 - threshold: (default) 0.5
 - debug: 입력시 True, 아니면 False
 - visualization: 입력시 True, 아니면 False
-- page_size: 저장될 이미지 하나에 포함될 이미지의 개수 (default) 4
+- page_size: 저장될 이미지 하나에 포함될 이미지의 개수 (default) 20
 - page_lim:  샘플링 여부 (default) None --> int 입력값 수정으로 샘플링의 양을 설정
 """
 
