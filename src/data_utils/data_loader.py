@@ -235,7 +235,7 @@ class PillDataset(Dataset):
             if debug:
                 print(f"\n[DEBUG] 총 {len(common_name)}개의 이미지-어노테이션 파일 처리")
                 if missing_img:
-                    print(f"[WARNING] 어노테이션은 있지만 이미지가 없는 파일 목록(총 {len(missing_img)}개개):")
+                    print(f"[WARNING] 어노테이션은 있지만 이미지가 없는 파일 목록(총 {len(missing_img)}개):")
                     for name in sorted(missing_img):
                         print(f" - {name}")
                 if missing_ann:
@@ -524,7 +524,7 @@ def get_loader(img_dir, ann_dir=None, batch_size=8, mode="train", val_ratio=0.2,
         
         # 라벨 추출
         labels_for_stratify = []
-        # 첫 번째 카테고리 아이디를 기준으로 분포를 측정(왜곡이 될 수 있지만 감당 가능함)
+        # 마지막 카테고리 아이디를 기준으로 분포를 측정(왜곡이 될 수 있지만 감당 가능함)
         for idx in range(len(base_dataset)):
             ann = base_dataset.get_ann_info(idx)
             if ann is not None and ann["annotations"]:
@@ -544,6 +544,7 @@ def get_loader(img_dir, ann_dir=None, batch_size=8, mode="train", val_ratio=0.2,
             from collections import Counter
             label_counts = Counter(labels_for_stratify)
             print(f"[DEBUG] Stratify용 레이블 전체 분포 (총 {len(label_counts)}개):")
+            print("[DEBUG] 현재 카테고리 아이디 변환 이전")
             for cat_id, count in sorted(label_counts.items(), key=lambda x: x[1], reverse=True):
                 print(f"  - Category ID {cat_id}: {count}개")
 
