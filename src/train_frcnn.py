@@ -162,7 +162,7 @@ def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5,
         # 모델 저장
         if map_score > best_map_score:
             best_map_score = map_score
-            save_model(model, session_folder)
+            save_model(model, session_folder, lr=lr, epoch=num_epochs, batch_size=batch_size, optimizer=optimizer_name, scheduler=scheduler_name, weight_decay=weight_decay)
             print(f"Model saved with mAP score: {best_map_score:.4f}")
 
         # 텐서보드 학습률 기록
