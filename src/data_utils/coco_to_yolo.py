@@ -11,9 +11,9 @@ import os
 import argparse
 from src.data_utils.data_loader import get_category_mapping
 
-def convert_coco_to(json_file, output_dir):
+def convert_json_to_txt(json_file, output_dir):
     """
-    COCO JSON 형식의 어노테이션 데이터를 YOLO 형식으로 변환하는 함수.
+    COCO JSON 형식의 어노테이션 데이터를 YOLO TEXT 형식으로 변환하는 함수.
 
     Args:
         json_file (str): COCO 형식의 JSON 어노테이션 파일 경로
@@ -32,6 +32,7 @@ def convert_coco_to(json_file, output_dir):
     for img in data["images"]:
         img_id = img["id"]
         img_w, img_h = img["width"], img["height"]
+        # .png -> .txt
         label_path = os.path.join(output_dir, f"{img['file_name'].replace('.png', '.txt')}")
 
         with open(label_path, "w", encoding="utf-8") as f:
@@ -43,12 +44,14 @@ def convert_coco_to(json_file, output_dir):
 
                     for category in data['categories']:
                         if ann["category_id"] == category["id"]:
-                            category_id = name_to_idx[category['name']]
+                            # 0:배경인데 배경을 없애기 위해서 -1함
+                            category_id = name_to_idx[category['name']] - 1
                             f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}\n")
+
 
 def process_all_json(json_folder, output_dir):
     """
-    폴더 내 모든 COCO JSON 파일을 YOLO 형식으로 변환하는 함수.
+    폴더 내 모든 COCO JSON 파일을 YOLO TEXT 형식으로 변환하는 함수.
 
     Args:
         json_folder (str): 변환할 COCO JSON 파일이 저장된 폴더
@@ -57,6 +60,9 @@ def process_all_json(json_folder, output_dir):
     if not os.path.exists(json_folder):
         print(f"JSON 폴더가 존재하지 않습니다: {json_folder}")
         return
+    
+    # output_dir 폴더가 없으면 생성 (있으면 무시)
+    os.makedirs(output_dir, exist_ok=True)
 
     json_files = [f for f in os.listdir(json_folder) if f.endswith('.json')]
 
@@ -69,7 +75,7 @@ def process_all_json(json_folder, output_dir):
     # 변환 진행
     for i, json_file in enumerate(json_files, start=1):
         json_path = os.path.join(json_folder, json_file)
-        convert_coco_to(json_path, output_dir)
+        convert_json_to_txt(json_path, output_dir)
 
 
     print("모든 JSON 파일 변환 완료")

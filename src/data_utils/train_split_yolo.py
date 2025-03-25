@@ -32,7 +32,7 @@ label_files = [f for f in os.listdir(label_dir) if f.endswith(".txt")]
 image_files = [f.replace(".txt", ".png") for f in label_files]
 
 # TODO: stratify
-class_ids = set()
+class_ids = []
 try:
     for filename in os.listdir(label_dir):
         if filename.endswith('.txt'):

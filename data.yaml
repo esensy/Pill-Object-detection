@@ -4,8 +4,8 @@
 
 # 상대경로가 아닌 절대경로로 넣으세요 !!!!!!!!!!
 # copy path ! not relative path !
-train: C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\train.txt
-val: C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\val.txt
+train: C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\train_labels\train
+val: C:\Users\user\Desktop\PythonWorkspace\new_neo_project1\data\train_labels\val
 
 train_labels: data/train_labels_YOLO/train # 학습 레이블 경로
 val_labels: data/train_labels_YOLO/val # 검증 레이블 경로
