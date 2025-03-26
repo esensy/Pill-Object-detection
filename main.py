@@ -3,7 +3,7 @@ import torch
 from src.train_frcnn import train
 from src.test_frcnn import test
 from src.utils import visualization
-
+from src.make_csv import submission_csv
 """
 학습 실행
 1번 실험 mAP = 0.9080
@@ -12,6 +12,9 @@ python main.py --mode train --batch_size 4 --epochs 30 --optimizer sgd --schedul
 2번 실험
 python main.py --mode train --batch_size 4 --epochs 15 --optimizer adamw --scheduler cosine --lr 0.0001 --weight_decay 0.0001
 
+실행
+python main.py --mode test --img_dir data/test_images --model_path model_31.pth
+python main.py --mode test --img_dir "data/test_images" --debug --visualization --model_path model_31.pth
 
 예측 실행
 python main.py --mode test --img_dir "data/test_images"  --> 기본 실행
@@ -87,6 +90,8 @@ def main():
                           page_size=args.page_size, 
                           page_lim=args.page_lim, 
                           debug=args.debug)
+            submission_csv(results, test_dir=args.img_dir, submission_file_path='./submission.csv', debug=False)
+
 
 if __name__ == "__main__":
     main()
