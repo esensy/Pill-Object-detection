@@ -1,124 +1,180 @@
-import torch
-import torch.optim as optim
-import torch.nn as nn
+"""
+이 스크립트는 PyTorch를 사용하여 Faster R-CNN 객체 탐지 모델을 학습합니다.
+데이터를 로드하고, 모델을 학습하며, 성능을 평가하고, 가장 좋은 성능을 보인 모델을 저장하는 기능을 포함합니다.
+
+주요 단계:
+1. 데이터셋을 로드하고 어노테이션을 전처리
+2. 주어진 하이퍼파라미터로 모델 학습
+3. 검증을 수행하고 mAP(mean Average Precision) 평가
+4. 검증 성능이 가장 좋은 모델을 저장
+
+필수 라이브러리:
+- numpy
+- torch
+- tqdm
+- src.utils, src.data_utils, src.model_utils의 커스텀 모듈
+"""
+# 외부 모듈듈
+import numpy as np
 from tqdm import tqdm
-from new_neo_project1.src.models.model import get_fast_rcnn_model
-from new_neo_project1.src.models.model import save_model
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
+import torchvision.utils as vutils
+
+# 내부 모듈듈
 from src.utils import get_optimizer
 from src.utils import get_scheduler
-# from src.dataset import get_dataloader
-# from src.dataset import split_dataloader
-from src.data_loader import get_loader
+from src.utils import calculate_map
+from src.data_utils.data_loader import get_loader
+from src.data_utils.data_loader import get_category_mapping
+from src.model_utils.basic_frcnn import get_new_session_folder, save_model
+from src.model_utils.basic_frcnn import get_fast_rcnn_model
 
-"""
-**Fast R-CNN에서 SGD를 쓰는 이유**
+# 텐서보드 객체 생성
+writer = SummaryWriter("tensorboard_log_dir")
 
-일반화 성능이 더 좋음 (과적합 방지)
-메모리 효율적 (대규모 데이터에 적합)
-Momentum을 추가하면 안정적 (빠른 수렴)
-즉, Fast R-CNN에서는 빠르게 최적화하는 것보다, 일반화가 잘 되면서도 안정적인 학습이 더 중요하므로 SGD를 선택
-"""
-def train(json_dir, img_dir, batch_size=5, num_classes=74, num_epochs=5, lr=0.001, weight_decay=0.0005, device="cuda", debug=False):
-    # 학습용 데이터 로더, 분할
-    # dataloader = get_dataloader(json_dir, img_dir, batch_size)
-    # train_loader, val_loader = split_dataloader(dataloader, val_split=0.2)
-    train_loader = get_loader(img_dir, json_dir, batch_size, mode="train", val_ratio=0.2, debug=debug)
-    val_loader = get_loader(img_dir, json_dir, batch_size, mode="val", val_ratio=0.2, debug=debug)
 
-    # 모델 옵티마이저 스케쥴러 정의
+def train(img_dir: str, json_dir: str, batch_size: int = 8, num_epochs: int = 5, optimizer_name: str = "sgd", 
+          scheduler_name: str = "plateau", lr: float = 0.001, weight_decay: float = 0.0005, 
+          device: str = "cpu", debug: bool = False):
+    """
+    Faster R-CNN 모델을 학습하는 함수
+    
+    파라미터:
+    - img_dir (str): 학습 이미지가 저장된 디렉토리 경로
+    - json_dir (str): 어노테이션 JSON 파일이 저장된 디렉토리 경로
+    - batch_size (int): 미니배치 크기 (기본값: 16)
+    - num_epochs (int): 학습 에폭 수 (기본값: 5)
+    - optimizer_name (str): 옵티마이저 종류 (기본값: 'sgd')
+    - scheduler_name (str): 스케줄러 종류 (기본값: 'plateau')
+    - lr (float): 학습률 (기본값: 0.001)
+    - weight_decay (float): 가중치 감쇠 (기본값: 0.0005)
+    - device (str): 학습을 수행할 디바이스 ('cpu' 또는 'cuda')
+    - debug (bool): 디버깅 모드 활성화 여부
+    """
+    
+    # 입력값 검증
+    assert isinstance(img_dir, str), "img_dir must be a string"
+    assert isinstance(json_dir, str), "json_dir must be a string"
+    assert isinstance(batch_size, int) and batch_size > 0, "batch_size must be a positive integer"
+    assert isinstance(num_epochs, int) and num_epochs > 0, "num_epochs must be a positive integer"
+    assert isinstance(optimizer_name, str), "optimizer_name must be a string"
+    assert isinstance(scheduler_name, str), "scheduler_name must be a string"
+    assert isinstance(lr, float) and lr > 0, "lr must be a positive float"
+    assert isinstance(weight_decay, float) and weight_decay >= 0, "weight_decay must be a non-negative float"
+    assert isinstance(device, str), "device must be a string"
+    assert isinstance(debug, bool), "debug must be a boolean"
+
+    # 데이터 로드 및 클래스 매핑
+    name_to_idx, idx_to_name = get_category_mapping(json_dir)
+    num_classes = len(name_to_idx)
+    train_loader, val_loader = get_loader(img_dir, json_dir, batch_size, mode="train", val_ratio=0.2, bbox_format="XYXY", debug=debug)
+
+    # 모델 및 학습 설정
     model = get_fast_rcnn_model(num_classes).to(device)
-    optimizer = get_optimizer("sgd", model, lr, weight_decay)
-    scheduler = get_scheduler("plateau", optimizer, T_max=100) # T_max는 cosine만 적용되는 파라미터
+    optimizer = get_optimizer(optimizer_name, model, lr, weight_decay)
+    scheduler = get_scheduler(scheduler_name, optimizer, step_size=5, gamma=0.1, T_max=100) # T_max는 CosineAnnealingLR에서만 사용
 
-    # 검증 손실 초기화
-    best_val_loss = float("inf")
+    # 새로운 세션 폴더 생성
+    session_folder = get_new_session_folder(save_dir="./models", session_prefix="frcnn_session_")
 
+    # 최고 성능 모델 저장을 위한 변수
+    best_map_score = 0
+    
     # 학습 루프
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
         epoch_loss_details = {}
 
-        # 1. 학습 단계
-        progress_bar = tqdm(train_loader, total=len(train_loader), desc="Processing Training", dynamic_ncols=True)
+        progress_bar = tqdm(train_loader, total=len(train_loader), desc="Train", dynamic_ncols=True)
 
+        # images 포맷 맞추기
         for images, targets in progress_bar:
-            images = [img.to(device) for img in images]
+            images = [img.to(device) for img in images] 
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-            # 모델 학습
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
 
-            optimizer.zero_grad()
-            losses.backward()
 
-            # Gradient Clipping 추가
+            losses.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
             total_loss += losses.item()
 
-            # 개별 손실 요소 누적
             for k, v in loss_dict.items():
                 if k not in epoch_loss_details:
                     epoch_loss_details[k] = 0
                 epoch_loss_details[k] += v.item()
-                    # 평균 손실 계산
+
             avg_loss_details = ", ".join([f"{k}: {v / len(train_loader):.4f}" for k, v in epoch_loss_details.items()])
+            progress_bar.set_postfix(Avg_Loss=avg_loss_details)
+        
+        # 텐서보드 기록 추가
+        writer.add_scalar("Loss/Total", total_loss, epoch)
+        for k, v in epoch_loss_details.items():
+            writer.add_scalar(f"Loss/{k}", v / len(train_loader), epoch)
 
-            # tqdm 진행 바의 postfix를 동적으로 업데이트
-            progress_bar.set_postfix(
-                Avg_Loss=avg_loss_details
-            )
 
-        avg_loss_details = ", ".join([f"{k}: {v / len(train_loader):.4f}" for k, v in epoch_loss_details.items()])
         print(f"Epoch {epoch+1} Complete - Total Loss: {total_loss:.4f}, Avg Loss Per Component: {avg_loss_details}")
 
-
-        # 2. 검증 단계
-        # model.eval()
-        val_loss = 0
-        val_loss_details = {}
-
+        # 검증
         with torch.no_grad():
-            evaluate_bar = tqdm(val_loader, total=len(val_loader), desc="Processing validation", dynamic_ncols=True)
+            model.eval()
+            predictions = []
+            targets_list = []
+            for images, targets in tqdm(val_loader, desc="Validation", dynamic_ncols=True):
 
-            for images, targets in evaluate_bar:
                 images = [img.to(device) for img in images]
-                targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-                val_loss_dict = model(images, targets)
-                losses = sum(loss for loss in val_loss_dict.values())
+                outputs = model(images)
 
-                val_loss += losses.item()
+                # 예측값 정리
+                for output in outputs:
+                    predictions.append({
+                        'boxes': output['boxes'].cpu().numpy().tolist(),
+                        'labels': output['labels'].cpu().numpy().tolist(),
+                        'scores': output['scores'].cpu().numpy().tolist()
+                    })
 
-                for k, v in val_loss_dict.items():
-                    if k not in val_loss_details:
-                        val_loss_details[k] = 0
-                    val_loss_details[k] += v.item()
+                # 실제값 정리
+                for target in targets:
+                    targets_list.append({
+                        'boxes': target['boxes'].cpu().numpy().tolist(),
+                        'labels': target['labels'].cpu().numpy().tolist()
+                    })
 
-                # tqdm 진행 바의 postfix를 동적으로 업데이트
-                avg_val_loss_details = ", ".join([f"{k}: {v / len(val_loader):.4f}" for k, v in val_loss_details.items()])
-                evaluate_bar.set_postfix(
-                    Avg_Val_Loss=avg_val_loss_details
-                )
+            # mAP 계산
+            map_score, precision, recall = calculate_map(predictions, targets_list, num_classes, iou_threshold=0.5)
 
-        avg_val_loss_details = ", ".join([f"{k}: {v / len(val_loader):.4f}" for k, v in val_loss_details.items()])
-        print(f"Validation Loss for Epoch {epoch+1} - Total Loss: {val_loss:.4f}, Avg Loss Per Component: {avg_val_loss_details}")
+            # 텐서보드에 기록
+            writer.add_scalar("mAP", map_score, epoch)
+            writer.add_scalar("Precision", precision, epoch)
+            writer.add_scalar("Recall", recall, epoch)
 
-        # ReduceLROnPlateau 사용 시
-        if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-            scheduler.step(val_loss)  # 검증 손실을 넘겨줌
+            print(f"mAP: {map_score}, Precision: {precision}, Recall: {recall}")
+                
+
+        # 모델 저장
+        if map_score > best_map_score:
+            best_map_score = map_score
+            save_model(model, session_folder, lr=lr, epoch=num_epochs, batch_size=batch_size, optimizer=optimizer_name, scheduler=scheduler_name, weight_decay=weight_decay)
+            print(f"Model saved with mAP score: {best_map_score:.4f}")
+
+        # 텐서보드 학습률 기록
+        current_lr = optimizer.param_groups[0]['lr']
+        writer.add_scalar("Learning Rate", current_lr, epoch)
+        
+        # 학습률 스케줄러 업데이트
+        if scheduler_name == "plateau":
+            scheduler.step(map_score) # ReduceLROnPlateau의 경우 mode='max'로 설정 (성능이 좋아지면 학습률 감소)
         else:
             scheduler.step()
-        
 
-        # 검증 손실이 개선되었으면 모델 저장
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            print(f"Validation Loss decreased to {best_val_loss:.4f}. Saving model...")
-            save_model(model, save_dir="./models", base_name="best_trained_model", ext=".pth")
-
-if __name__ == "__main__":
-    train(json_dir="data/mapped_annotations.json", img_dir="data/train_images")
+    # 텐서보드 종료        
+    writer.close()
+    print(f"Training complete. Best mAP: {best_map_score:.4f}")
